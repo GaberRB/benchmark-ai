@@ -1,0 +1,50 @@
+# ── Build artifacts ──────────────────────────────────────────────
+target/
+build/
+.gradle/
+.kotlin/
+
+# ── Source code (gerado pelos agentes durante o benchmark) ───────
+java-implementation/src/
+kotlin-implementation/src/
+java-implementation-mode2/src/
+kotlin-implementation-mode2/src/
+
+# ── Resultados do benchmark (cada um gera os seus) ───────────────
+metrics/reports/*.json
+metrics/reports/*.html
+metrics/reports/*.md
+
+# ── Logs de execução ─────────────────────────────────────────────
+*.log
+bootrun*.log
+
+# ── Arquivos temporários e locais ────────────────────────────────
+*.zip
+*.mp4
+-w
+
+# ── Claude Code (configurações locais, sessões e telemetria) ─────
+.claude/settings.local.json
+.claude/projects/
+.claude/sessions/
+.claude/telemetry/
+
+# ── Arquivos Gradle da raiz (não fazem parte do benchmark) ───────
+/gradlew
+/gradlew.bat
+/build.gradle.kts
+/settings.gradle.kts
+/gradle/
+/src/
+/HELP.md
+
+# ── IDEs ─────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
