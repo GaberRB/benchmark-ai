@@ -1,11 +1,15 @@
 """
-report.py — Gera relatório HTML interativo do benchmark Java vs Kotlin.
+report.py — Gera relatório HTML interativo do benchmark.
 
-Uso:
-  python metrics/report.py                              # detecta últimos java + kotlin
+Modos:
+  python metrics/report.py                              # Java vs Kotlin (padrão)
   python metrics/report.py --java j.json --kotlin k.json
+  python metrics/report.py --mode arch                  # comparativo de arquiteturas
+  python metrics/report.py --mode arch --files a.json b.json c.json
+
 Saída:
   metrics/reports/benchmark_report_<timestamp>.html
+  metrics/reports/arch_report_<timestamp>.html
 """
 
 import argparse, json, os, glob
@@ -21,7 +25,8 @@ def find_latest(language: str) -> str | None:
 
 
 def load(path: str) -> dict:
-    with open(path, encoding="utf-8", errors="replace") as f:
+    # utf-8-sig trata tanto UTF-8 puro quanto UTF-8 com BOM (gerado pelo PowerShell)
+    with open(path, encoding="utf-8-sig", errors="replace") as f:
         return json.load(f)
 
 
@@ -554,30 +559,397 @@ document.getElementById('tbl').innerHTML = html;
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def find_arch_reports() -> list[str]:
+    """Localiza todos os arch-*.json excluindo snapshots."""
+    pattern = os.path.join(REPORTS_DIR, "arch-*.json")
+    files = [f for f in glob.glob(pattern) if "snapshot" not in os.path.basename(f)]
+    files.sort(key=os.path.getmtime)
+    return files
+
+
+def generate_arch(datasets: list[dict], files: list[str]) -> str:
+    """Gera HTML comparativo para N arquiteturas."""
+    ARCH_COLORS = ["#4fc3f7", "#81c784", "#ffb74d", "#f06292", "#ce93d8", "#80cbc4"]
+    ARCH_BG     = ["rgba(79,195,247,0.72)", "rgba(129,199,132,0.72)",
+                   "rgba(255,183,77,0.72)", "rgba(240,98,146,0.72)",
+                   "rgba(206,147,216,0.72)", "rgba(128,203,196,0.72)"]
+
+    arch_names = []
+    for d in datasets:
+        # Tenta várias posições onde o nome da arquitetura pode estar
+        name = (
+            d.get("architecture")                          # root (hexagonal manual)
+            or (d.get("meta") or {}).get("architecture")   # meta.architecture (mvc)
+            or (d.get("meta") or {}).get("language", "")   # meta.language (arch-clean → clean)
+            or "unknown"
+        )
+        # Remove prefixo "arch-" se presente (ex: "arch-clean" → "clean")
+        if name.startswith("arch-"):
+            name = name[5:]
+        arch_names.append(name)
+
+    data = {
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "files": [os.path.basename(f) for f in files],
+        "arch_names": arch_names,
+        "datasets": datasets,
+        "colors": ARCH_COLORS[:len(datasets)],
+        "bg_colors": ARCH_BG[:len(datasets)],
+    }
+    json_str = json.dumps(data, ensure_ascii=False, indent=2).replace("</script>", "<\\/script>")
+    return ARCH_HTML.replace("__DATA__", json_str)
+
+
+ARCH_HTML = r"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Benchmark — Padrões Arquiteturais</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f18; --surface: #161927; --surface2: #1e2236; --border: #272b42;
+  --text: #dde3f0; --dim: #7a88a8; --green: #4caf50; --red: #ef5350;
+  --radius: 12px; --shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; }
+.container { max-width: 1300px; margin: 0 auto; padding: 0 24px; }
+.hdr { background: linear-gradient(140deg, #12142a 0%, #0a1a2a 100%); border-bottom: 1px solid var(--border); padding: 40px 0 28px; }
+.hdr h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(90deg, #4fc3f7 0%, #81c784 40%, #ffb74d 70%, #f06292 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; }
+.hdr-sub { color: var(--dim); font-size: 15px; margin-bottom: 18px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--dim); }
+.tag b { color: var(--text); }
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.nav-inner { display: flex; overflow-x: auto; scrollbar-width: none; }
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-a { padding: 13px 18px; font-size: 13px; color: var(--dim); text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent; }
+.nav-a:hover { color: var(--text); }
+.main { padding: 36px 0 60px; }
+.section { margin-bottom: 52px; }
+.sec-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.ch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.ch-title { font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; }
+.tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { background: var(--surface2); }
+th { padding: 11px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--dim); font-weight: 600; white-space: nowrap; }
+td { padding: 9px 14px; border-top: 1px solid var(--border); }
+tr:hover td { background: rgba(255,255,255,.018); }
+.t-cat { color: var(--text); font-weight: 600; }
+.t-dim { color: var(--dim); }
+.t-best { font-weight: 700; }
+.footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="container">
+    <h1>AI Benchmark — Padrões Arquiteturais</h1>
+    <p class="hdr-sub">Task Manager REST API &mdash; Comparativo de Arquiteturas (Java 21, Spring Boot 3.2)</p>
+    <div class="tags" id="hdr-tags"></div>
+  </div>
+</header>
+<nav class="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a class="nav-a" href="#custo">💰 Custo</a>
+      <a class="nav-a" href="#velocidade">⚡ Velocidade</a>
+      <a class="nav-a" href="#erros">🐛 Erros</a>
+      <a class="nav-a" href="#qualidade">✅ Qualidade</a>
+      <a class="nav-a" href="#arquitetura">🏗 Arquitetura</a>
+      <a class="nav-a" href="#tabela">📋 Tabela</a>
+    </div>
+  </div>
+</nav>
+<main class="main">
+<div class="container">
+
+  <section class="section" id="custo">
+    <h2 class="sec-title">💰 Custo &amp; Tokens</h2>
+    <div class="charts-row">
+      <div class="ch-card"><div class="ch-title">Custo Total (USD)</div><canvas id="ch-cost"></canvas></div>
+      <div class="ch-card"><div class="ch-title">Output Tokens</div><canvas id="ch-out-tok"></canvas></div>
+      <div class="ch-card"><div class="ch-title">Chamadas API</div><canvas id="ch-api"></canvas></div>
+    </div>
+  </section>
+
+  <section class="section" id="velocidade">
+    <h2 class="sec-title">⚡ Velocidade</h2>
+    <div class="charts-row">
+      <div class="ch-card"><div class="ch-title">Duração da Sessão (min)</div><canvas id="ch-dur"></canvas></div>
+      <div class="ch-card"><div class="ch-title">Total de Turns</div><canvas id="ch-turns"></canvas></div>
+    </div>
+  </section>
+
+  <section class="section" id="erros">
+    <h2 class="sec-title">🐛 Erros de Desenvolvimento</h2>
+    <div class="charts-row" style="grid-template-columns:1fr">
+      <div class="ch-card"><div class="ch-title">Erros por Tipo</div><canvas id="ch-errors" style="max-height:280px"></canvas></div>
+    </div>
+  </section>
+
+  <section class="section" id="qualidade">
+    <h2 class="sec-title">✅ Qualidade de Código</h2>
+    <div class="charts-row">
+      <div class="ch-card"><div class="ch-title">LOC de Produção</div><canvas id="ch-loc"></canvas></div>
+      <div class="ch-card"><div class="ch-title">Cobertura de Linha (%)</div><canvas id="ch-cov"></canvas></div>
+    </div>
+  </section>
+
+  <section class="section" id="arquitetura">
+    <h2 class="sec-title">🏗 Métricas de Arquitetura</h2>
+    <div class="charts-row">
+      <div class="ch-card"><div class="ch-title">Arquivos .java Criados</div><canvas id="ch-files"></canvas></div>
+      <div class="ch-card"><div class="ch-title">Interfaces Criadas</div><canvas id="ch-ifaces"></canvas></div>
+      <div class="ch-card"><div class="ch-title">Conformidade Arquitetural (0-10)</div><canvas id="ch-conf"></canvas></div>
+    </div>
+  </section>
+
+  <section class="section" id="tabela">
+    <h2 class="sec-title">📋 Tabela Comparativa</h2>
+    <div class="tbl-wrap"><table id="tbl"></table></div>
+  </section>
+
+</div>
+</main>
+<footer class="footer">
+  <div class="container">Gerado por <b>metrics/report.py --mode arch</b> &nbsp;&middot;&nbsp; <span id="gen-at"></span></div>
+</footer>
+
+<script>
+const DATA = __DATA__;
+const DS = DATA.datasets || [];
+const NAMES = DATA.arch_names || [];
+const COLORS = DATA.colors || [];
+const BGS = DATA.bg_colors || [];
+
+document.getElementById('gen-at').textContent = DATA.generated_at;
+document.getElementById('hdr-tags').innerHTML = [
+  `<span class="tag">Arquiteturas: <b>${NAMES.length}</b></span>`,
+  `<span class="tag">Gerado: <b>${DATA.generated_at}</b></span>`,
+  ...NAMES.map((n, i) => `<span class="tag" style="border-color:${COLORS[i]};color:${COLORS[i]}">${n}</span>`)
+].join('');
+
+function gv(obj, ...keys) {
+  let cur = obj;
+  for (const k of keys) { if (cur == null) return 0; cur = cur[k]; }
+  return (cur != null && cur !== '') ? cur : 0;
+}
+function gs(obj, ...keys) {
+  let cur = obj;
+  for (const k of keys) { if (cur == null) return '—'; cur = cur[k]; }
+  return cur != null ? String(cur) : '—';
+}
+
+if (typeof Chart === 'undefined') {
+  document.getElementById('tbl').parentElement.insertAdjacentHTML('beforebegin',
+    '<div style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;padding:12px;color:#ef9a9a;margin-bottom:20px">⚠️ Chart.js não carregou. Tabela ainda funciona.</div>');
+} else {
+
+Chart.defaults.color = '#7a88a8';
+Chart.defaults.font.family = "system-ui, -apple-system, sans-serif";
+Chart.defaults.font.size = 12;
+const GRID = 'rgba(255,255,255,0.05)';
+
+function hBar(id, labels, datasets, opts={}) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${typeof ctx.raw==='number' ? ctx.raw.toLocaleString('pt-BR',{maximumFractionDigits:4}) : ctx.raw}${opts.suf||''}` } }
+      },
+      scales: {
+        x: { grid: { color: GRID }, ticks: { color: '#7a88a8', callback: v => `${v.toLocaleString('pt-BR')}${opts.suf||''}` } },
+        y: { grid: { color: GRID }, ticks: { color: '#dde3f0' } }
+      }
+    }
+  });
+}
+
+function mkDS(key_path, label_fn) {
+  return DS.map((d, i) => ({
+    label: NAMES[i],
+    data: [key_path.reduce((o,k)=>o?o[k]:0, d) || 0],
+    backgroundColor: BGS[i],
+    borderColor: COLORS[i],
+    borderWidth: 1
+  }));
+}
+
+function multiBar(id, metric_fn, opts={}) {
+  const datasets = DS.map((d, i) => ({
+    label: NAMES[i],
+    data: [metric_fn(d)],
+    backgroundColor: BGS[i],
+    borderColor: COLORS[i],
+    borderWidth: 1
+  }));
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: [''], datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top', labels: { color: '#dde3f0', padding: 12, boxWidth: 10 } },
+        tooltip: { callbacks: { label: ctx => ` ${NAMES[ctx.datasetIndex]}: ${typeof ctx.raw==='number'?ctx.raw.toLocaleString('pt-BR',{maximumFractionDigits:4}):ctx.raw}${opts.suf||''}` } }
+      },
+      scales: {
+        x: { grid: { color: GRID } },
+        y: { grid: { color: GRID }, ticks: { color: '#7a88a8', callback: v => `${v.toLocaleString('pt-BR')}${opts.suf||''}` } }
+      }
+    }
+  });
+}
+
+multiBar('ch-cost',    d => gv(d,'tokens','cost_usd'));
+multiBar('ch-out-tok', d => gv(d,'tokens','output_tokens_total'));
+multiBar('ch-api',     d => gv(d,'tokens','api_calls_count'));
+multiBar('ch-dur',     d => gv(d,'speed','session_duration_min'));
+multiBar('ch-turns',   d => gv(d,'iterations','total_turns'));
+multiBar('ch-loc',     d => gv(d,'code_quality','lines_of_code'));
+multiBar('ch-cov',     d => gv(d,'code_quality','test_coverage_line_pct'), { suf: '%' });
+multiBar('ch-files',   d => gv(d,'arch_metrics','file_count'));
+multiBar('ch-ifaces',  d => gv(d,'arch_metrics','interface_count'));
+multiBar('ch-conf',    d => gv(d,'arch_metrics','arch_conformance'));
+
+// Erros stacked
+new Chart(document.getElementById('ch-errors'), {
+  type: 'bar',
+  data: {
+    labels: NAMES,
+    datasets: [
+      { label: 'Compilação', data: DS.map(d=>gv(d,'errors','compile_errors')), backgroundColor: 'rgba(239,83,80,.8)' },
+      { label: 'Runtime',    data: DS.map(d=>gv(d,'errors','runtime_errors')),  backgroundColor: 'rgba(255,167,38,.8)' },
+      { label: 'Testes',     data: DS.map(d=>gv(d,'errors','test_failures')),   backgroundColor: 'rgba(66,165,245,.8)' },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top', labels: { color: '#dde3f0', padding: 12, boxWidth: 10 } } },
+    scales: {
+      x: { stacked: true, grid: { color: GRID } },
+      y: { stacked: true, grid: { color: GRID }, ticks: { stepSize: 1, color: '#7a88a8' } }
+    }
+  }
+});
+
+} // end Chart check
+
+// ── Tabela comparativa
+function fmt(v, t) {
+  if (t === 's') return v != null ? String(v) : '—';
+  if (typeof v !== 'number') return '—';
+  if (t === 'u') return `$${v.toFixed(4)}`;
+  if (t === 'p') return `${v.toFixed(1)}%`;
+  return v.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+const METRICS = [
+  // [categoria, label, fn(d), tipo, lowerIsBetter]
+  ['Tokens', 'Output Tokens',          d=>gv(d,'tokens','output_tokens_total'),   'n', true],
+  ['Tokens', 'Cache Read',             d=>gv(d,'tokens','cache_read_tokens'),      'n', true],
+  ['Tokens', 'Chamadas API',           d=>gv(d,'tokens','api_calls_count'),        'n', true],
+  ['Custo',  'Custo Total',            d=>gv(d,'tokens','cost_usd'),               'u', true],
+  ['Custo',  'Custo/Endpoint',         d=>gv(d,'tokens','cost_per_endpoint_usd'),  'u', true],
+  ['Velocidade', 'Duração (min)',      d=>gv(d,'speed','session_duration_min'),    'n', true],
+  ['Velocidade', 'Tempo/Endpoint',     d=>gv(d,'speed','time_per_endpoint_min'),   'n', true],
+  ['Velocidade', 'Throughput (ep/h)',  d=>gv(d,'speed','throughput_endpoints_per_hour'), 'n', false],
+  ['Iterações', 'Total de Turns',      d=>gv(d,'iterations','total_turns'),        'n', true],
+  ['Iterações', 'Tool Calls',          d=>gv(d,'iterations','tool_calls_total'),   'n', true],
+  ['Erros', 'Compilação',              d=>gv(d,'errors','compile_errors'),         'n', true],
+  ['Erros', 'Runtime',                 d=>gv(d,'errors','runtime_errors'),         'n', true],
+  ['Erros', 'Falhas de Teste',         d=>gv(d,'errors','test_failures'),          'n', true],
+  ['Erros', 'Total',                   d=>gv(d,'errors','total_errors'),           'n', true],
+  ['Qualidade', 'LOC Produção',        d=>gv(d,'code_quality','lines_of_code'),    'n', false],
+  ['Qualidade', 'LOC Testes',          d=>gv(d,'code_quality','test_lines_of_code'), 'n', false],
+  ['Qualidade', 'Cobertura Linha (%)', d=>gv(d,'code_quality','test_coverage_line_pct'), 'p', false],
+  ['Qualidade', 'Cobertura Branch (%)',d=>gv(d,'code_quality','test_coverage_branch_pct'), 'p', false],
+  ['E2E', 'Cenários Passou',           d=>gv(d,'e2e','passed'),                    'n', false],
+  ['Arquitetura', 'Arquivos .java',    d=>gv(d,'arch_metrics','file_count'),       'n', false],
+  ['Arquitetura', 'Interfaces',        d=>gv(d,'arch_metrics','interface_count'),  'n', false],
+  ['Arquitetura', 'Pacotes',           d=>gv(d,'arch_metrics','package_count'),    'n', false],
+  ['Arquitetura', 'Conformidade (0-10)',d=>gv(d,'arch_metrics','arch_conformance'), 'n', false],
+  ['Arquitetura', 'Violações',         d=>gv(d,'arch_metrics','dependency_violations'), 'n', true],
+];
+
+let html = '<thead><tr><th>Categoria</th><th>Métrica</th>';
+NAMES.forEach((n, i) => { html += `<th style="color:${COLORS[i]}">${n}</th>`; });
+html += '<th>Melhor</th></tr></thead><tbody>';
+
+let lastCat = null;
+METRICS.forEach(([cat, label, fn, t, lower]) => {
+  const vals = DS.map(fn);
+  const nums = vals.filter(v => typeof v === 'number');
+  const best = nums.length ? (lower ? Math.min(...nums) : Math.max(...nums)) : null;
+  const newCat = cat !== lastCat;
+  if (newCat) lastCat = cat;
+
+  html += `<tr${newCat ? ' style="border-top:2px solid var(--border)"' : ''}>`;
+  html += `<td class="${newCat ? 't-cat' : 't-dim'}" style="${!newCat ? 'color:transparent' : ''}">${cat}</td>`;
+  html += `<td class="t-dim">${label}</td>`;
+  vals.forEach((v, i) => {
+    const isBest = best != null && typeof v === 'number' && v === best;
+    html += `<td class="${isBest ? 't-best' : ''}" style="${isBest ? `color:${COLORS[i]}` : ''}">${fmt(v, t)}</td>`;
+  });
+  // Melhor coluna
+  const bestIdx = best != null ? vals.indexOf(best) : -1;
+  html += `<td style="color:${bestIdx>=0 ? COLORS[bestIdx] : 'var(--dim)'}; font-weight:600; white-space:nowrap">${bestIdx >= 0 ? NAMES[bestIdx] : '—'}</td>`;
+  html += '</tr>';
+});
+html += '</tbody>';
+document.getElementById('tbl').innerHTML = html;
+</script>
+</body>
+</html>"""
+
+
 def main():
     parser = argparse.ArgumentParser(description="Gera relatório HTML do benchmark")
-    parser.add_argument("--java",   help="Caminho para JSON Java (default: mais recente)")
-    parser.add_argument("--kotlin", help="Caminho para JSON Kotlin (default: mais recente)")
+    parser.add_argument("--mode",   default="lang", choices=["lang", "arch"],
+                        help="Modo: 'lang' (Java vs Kotlin) ou 'arch' (arquiteturas)")
+    parser.add_argument("--java",   help="[modo lang] Caminho para JSON Java")
+    parser.add_argument("--kotlin", help="[modo lang] Caminho para JSON Kotlin")
+    parser.add_argument("--files",  nargs="+", help="[modo arch] Arquivos JSON das arquiteturas")
     args = parser.parse_args()
 
-    jp = args.java   or find_latest("java")
-    kp = args.kotlin or find_latest("kotlin")
-
-    if not jp:
-        print("[report] ERRO: nenhum relatório java_*.json encontrado.")
-        return
-    if not kp:
-        print("[report] ERRO: nenhum relatório kotlin_*.json encontrado.")
-        return
-
-    print(f"[report] Java:   {jp}")
-    print(f"[report] Kotlin: {kp}")
-
-    html = generate(load(jp), load(kp), jp, kp)
-
     os.makedirs(REPORTS_DIR, exist_ok=True)
-    ts  = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    out = os.path.join(REPORTS_DIR, f"benchmark_report_{ts}.html")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+    if args.mode == "arch":
+        files = args.files or find_arch_reports()
+        if not files:
+            print("[report] ERRO: nenhum arquivo arch-*.json encontrado.")
+            print(f"[report] Procurado em: {REPORTS_DIR}")
+            return
+        datasets = [load(f) for f in files]
+        print(f"[report] Modo arch — {len(datasets)} arquitetura(s):")
+        for f in files:
+            print(f"  {f}")
+        html = generate_arch(datasets, files)
+        out = os.path.join(REPORTS_DIR, f"arch_report_{ts}.html")
+    else:
+        jp = args.java   or find_latest("java")
+        kp = args.kotlin or find_latest("kotlin")
+        if not jp:
+            print("[report] ERRO: nenhum relatório java_*.json encontrado.")
+            return
+        if not kp:
+            print("[report] ERRO: nenhum relatório kotlin_*.json encontrado.")
+            return
+        print(f"[report] Java:   {jp}")
+        print(f"[report] Kotlin: {kp}")
+        html = generate(load(jp), load(kp), jp, kp)
+        out = os.path.join(REPORTS_DIR, f"benchmark_report_{ts}.html")
+
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
 

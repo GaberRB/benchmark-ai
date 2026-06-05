@@ -311,8 +311,11 @@ def collect_error_metrics(messages: list[dict]) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Coleta métricas de uma sessão de benchmark")
-    parser.add_argument("--session-id", required=True)
-    parser.add_argument("--language",   required=True)
+    parser.add_argument("--session-id",   required=True)
+    parser.add_argument("--language",     required=True,
+                        help="Linguagem ou prefixo do arquivo (ex: java, kotlin, arch-hexagonal)")
+    parser.add_argument("--architecture", default=None,
+                        help="Nome do padrão arquitetural (ex: hexagonal). Adicionado ao JSON meta.")
     args = parser.parse_args()
 
     print(f"[collector] Procurando sessão: {args.session_id}")
@@ -330,15 +333,19 @@ def main():
 
     model_metrics = collect_model_metrics(messages)
 
+    meta = {
+        "session_id":       args.session_id,
+        "language":         args.language,
+        "collected_at_utc": datetime.now(timezone.utc).isoformat(),
+        "jsonl_source":     jsonl_path,
+        "message_count":    len(messages),
+        "cwd":              session_info.get("cwd", ""),
+    }
+    if args.architecture:
+        meta["architecture"] = args.architecture
+
     report = {
-        "meta": {
-            "session_id":       args.session_id,
-            "language":         args.language,
-            "collected_at_utc": datetime.now(timezone.utc).isoformat(),
-            "jsonl_source":     jsonl_path,
-            "message_count":    len(messages),
-            "cwd":              session_info.get("cwd", ""),
-        },
+        "meta": meta,
         "model":      model_metrics,
         "tokens":     collect_token_metrics(messages),
         "speed":      collect_speed_metrics(messages, session_info),

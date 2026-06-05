@@ -9,6 +9,7 @@ java-implementation/src/
 kotlin-implementation/src/
 java-implementation-mode2/src/
 kotlin-implementation-mode2/src/
+arch-benchmark/*/src/
 
 # ── Resultados do benchmark (cada um gera os seus) ───────────────
 metrics/reports/*.json
