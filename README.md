@@ -5,10 +5,10 @@
 **Medimos custo, velocidade e qualidade da IA em dois experimentos controlados.**
 
 [![Model](https://img.shields.io/badge/Model-claude--sonnet--4--6-orange?style=flat-square)](https://anthropic.com)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-2.1.165-orange?style=flat-square)](https://claude.ai/code)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-2.1.167-orange?style=flat-square)](https://claude.ai/code)
 [![Framework](https://img.shields.io/badge/Framework-Spring%20Boot%203.2-6db33f?style=flat-square)](https://spring.io/projects/spring-boot)
 [![Build](https://img.shields.io/badge/Build-Maven%203.9-c71a36?style=flat-square)](https://maven.apache.org)
-[![E2E](https://img.shields.io/badge/E2E-48%2F48%20✅-brightgreen?style=flat-square)](#)
+[![E2E](https://img.shields.io/badge/E2E-108%2F108%20✅-brightgreen?style=flat-square)](#)
 
 </div>
 
@@ -21,7 +21,7 @@ Mesmo agente, mesma tarefa (Task Manager REST API — 5 endpoints CRUD, storage 
 | # | Variável | Constante | Pergunta |
 |---|----------|-----------|---------|
 | 1 | **Linguagem** (Java vs Kotlin) | Arquitetura MVC | Qual linguagem a IA implementa melhor? |
-| 2 | **Arquitetura** (MVC / Vertical Slice / Clean / Hexagonal) | Linguagem Java | Qual padrão arquitetural a IA executa melhor? |
+| 2 | **Arquitetura** (MVC / Vertical Slice / Clean / Hexagonal / DDD / Event-Driven / CQRS) | Linguagem Java | Qual padrão arquitetural a IA executa melhor? |
 
 ---
 
@@ -168,14 +168,14 @@ nos exemplos públicos, forçando mais iterações.
 > **Variável:** arquitetura do código · **Constante:** Java 21 + Spring Boot 3.2 + Maven
 
 Qual padrão arquitetural a IA implementa com menor custo, menos erros e maior conformidade?
-Todas as 4 arquiteturas receberam PRDs detalhados com estrutura de pacotes obrigatória,
+Todas as 7 arquiteturas receberam PRDs detalhados com estrutura de pacotes obrigatória,
 regras de dependência explícitas e nomenclatura mandatória.
 
 ## 🎯 Resultados
 
 <table>
 <tr>
-<td align="center" width="25%">
+<td align="center">
 
 ### 🔵 MVC
 
@@ -186,13 +186,13 @@ regras de dependência explícitas e nomenclatura mandatória.
 | 📡 API calls | **72** |
 | 🐛 Erros | **5** |
 | 📏 LOC prod. | **245** |
-| 🎯 Cobertura | **93%** |
+| 🎯 Cobertura | **93.0%** |
 | 📁 Arquivos | **12** |
 | 🏗 Conform. | **10/10** |
 | ✅ E2E | **12/12** |
 
 </td>
-<td align="center" width="25%">
+<td align="center">
 
 ### 🟢 Vertical Slice
 
@@ -209,7 +209,7 @@ regras de dependência explícitas e nomenclatura mandatória.
 | ✅ E2E | **12/12** |
 
 </td>
-<td align="center" width="25%">
+<td align="center">
 
 ### 🟠 Clean Arch
 
@@ -220,13 +220,13 @@ regras de dependência explícitas e nomenclatura mandatória.
 | 📡 API calls | **85** |
 | 🐛 Erros | **1** |
 | 📏 LOC prod. | **336** |
-| 🎯 Cobertura | **97%** |
+| 🎯 Cobertura | **97.0%** |
 | 📁 Arquivos | **27** |
 | 🏗 Conform. | **10/10** |
 | ✅ E2E | **12/12** |
 
 </td>
-<td align="center" width="25%">
+<td align="center">
 
 ### 🔴 Hexagonal
 
@@ -244,144 +244,230 @@ regras de dependência explícitas e nomenclatura mandatória.
 
 </td>
 </tr>
+<tr>
+<td align="center">
+
+### 🟤 DDD Tático
+
+| | |
+|---|---|
+| 💰 Custo | **$2.33** |
+| ⏱ Duração | **5.0 min** |
+| 📡 API calls | **51** |
+| 🐛 Erros | **1** |
+| 📏 LOC prod. | **295** |
+| 🎯 Cobertura | **88.0%** |
+| 📁 Arquivos | **17** |
+| 🏗 Conform. | **8/10** |
+| ✅ E2E | **12/12** |
+
+</td>
+<td align="center">
+
+### 🟡 Event-Driven
+
+| | |
+|---|---|
+| 💰 Custo | **$2.22** |
+| ⏱ Duração | **8.85 min** |
+| 📡 API calls | **63** |
+| 🐛 Erros | **5** |
+| 📏 LOC prod. | **373** |
+| 🎯 Cobertura | **90.0%** |
+| 📁 Arquivos | **22** |
+| 🏗 Conform. | **10/10** |
+| ✅ E2E | **12/12** |
+
+</td>
+<td align="center">
+
+### 🟣 CQRS
+
+| | |
+|---|---|
+| 💰 Custo | **$3.27** |
+| ⏱ Duração | **8.81 min** |
+| 📡 API calls | **97** |
+| 🐛 Erros | **2** |
+| 📏 LOC prod. | **312** |
+| 🎯 Cobertura | **95.0%** |
+| 📁 Arquivos | **25** |
+| 🏗 Conform. | **10/10** |
+| ✅ E2E | **12/12** |
+
+</td>
+<td align="center">
+</td>
+</tr>
 </table>
 
 ## 🔢 Tokens & Custo
 
 <table>
 <thead>
-<tr><th>Métrica</th><th>🔵 MVC</th><th>🟢 V. Slice</th><th>🟠 Clean</th><th>🔴 Hexagonal</th><th>Melhor</th></tr>
+<tr><th>Métrica</th><th>🔵 MVC</th><th>🟢 V.Slice</th><th>🟠 Clean</th><th>🔴 Hexag.</th><th>🟤 DDD</th><th>🟡 Event-Dr.</th><th>🟣 CQRS</th><th>Melhor</th></tr>
 </thead>
 <tbody>
-<tr><td>Output tokens</td><td>27.550</td><td>107.396</td><td>90.172</td><td>65.383</td><td>🔵 MVC 🏆</td></tr>
-<tr><td>Cache creation</td><td>111.850</td><td>352.741</td><td>176.957</td><td>142.523</td><td>🔵 MVC 🏆</td></tr>
-<tr><td>Cache read</td><td>2.976.920</td><td>3.020.234</td><td>3.880.112</td><td>4.680.032</td><td>🔵 MVC 🏆</td></tr>
-<tr><td>Cache hit rate</td><td>96,38%</td><td>89,54%</td><td>95,64%</td><td>97,04%</td><td>🔴 Hexagonal</td></tr>
-<tr><td>API calls</td><td>72</td><td>80</td><td>85</td><td>96</td><td>🔵 MVC 🏆</td></tr>
-<tr><td><b>Custo total</b></td><td><b>$1,73</b></td><td><b>$3,84</b></td><td><b>$3,18</b></td><td><b>$2,92</b></td><td><b>🔵 MVC 🏆</b></td></tr>
-<tr><td>Custo/endpoint</td><td>$0,35</td><td>$0,77</td><td>$0,64</td><td>$0,58</td><td>🔵 MVC 🏆</td></tr>
+<tr><td>Output tokens</td><td>27.550</td><td>107.396</td><td>90.172</td><td>65.383</td><td>74.224</td><td>57.293</td><td>63.869</td><td>🔵 MVC 🏆</td></tr>
+<tr><td>Cache creation</td><td>111.850</td><td>352.741</td><td>176.957</td><td>142.523</td><td>154.604</td><td>148.386</td><td>219.151</td><td>🔵 MVC 🏆</td></tr>
+<tr><td>Cache read</td><td>2.976.920</td><td>3.020.234</td><td>3.880.112</td><td>4.680.032</td><td>2.109.868</td><td>2.676.163</td><td>4.976.768</td><td>🟤 DDD 🏆</td></tr>
+<tr><td>Cache hit rate</td><td>96,38%</td><td>89,54%</td><td>95,64%</td><td>97,04%</td><td>93,17%</td><td>94,75%</td><td>95,78%</td><td>🔴 Hexagonal</td></tr>
+<tr><td>API calls</td><td>72</td><td>80</td><td>85</td><td>96</td><td>51</td><td>63</td><td>97</td><td>🟤 DDD 🏆</td></tr>
+<tr><td><b>Custo total</b></td><td>$1,73</td><td>$3,84</td><td>$3,18</td><td>$2,92</td><td>$2,33</td><td><b>$2,22</b></td><td>$3,27</td><td><b>🟡 Event-Dr. 🏆</b></td></tr>
+<tr><td>Custo/endpoint</td><td>$0,35</td><td>$0,77</td><td>$0,64</td><td>$0,58</td><td>$0,47</td><td><b>$0,44</b></td><td>$0,65</td><td><b>🟡 Event-Dr. 🏆</b></td></tr>
 </tbody>
 </table>
 
 **Ranking de custo:**
 
 ```
-🔵 MVC           ██████░░░░░░░░░░░░░░  $1,73   ← mais barato 🏆
-🔴 Hexagonal     ████████████░░░░░░░░  $2,92
-🟠 Clean Arch    █████████████░░░░░░░  $3,18
-🟢 Vertical Slice████████████████░░░░  $3,84   ← mais caro
+🟡 Event-Driven  ████████████░░░░░░░░  $2,22   ← mais barato 🏆
+🔵 MVC           █████████░░░░░░░░░░░  $1,73   ← mais barato (output tokens)
+🟤 DDD           ████████████░░░░░░░░  $2,33
+🔴 Hexagonal     ███████████████░░░░░  $2,92
+🟠 Clean Arch    ████████████████░░░░  $3,18
+🟣 CQRS          █████████████████░░░  $3,27
+🟢 Vertical Slice████████████████████  $3,84   ← mais caro
 ```
 
-> Vertical Slice gerou **3,9× mais output tokens** que MVC para a mesma API.
-> Cada slice replica a estrutura completa (controller + use case + DTO) por feature —
-> o modelo escreve muito mais código, mesmo que bem organizado.
+> Event-Driven foi o **mais barato no total** ($2,22) por usar cache pesadamente e ter o menor
+> output por endpoint ($0,44). MVC ainda domina em output tokens brutos — escreve muito menos código.
+> CQRS foi o **mais caro por endpoint** ($0,65) — padrão menos frequente nos dados de treinamento.
 
 ## ⚡ Velocidade & Iterações
 
-| Métrica | 🔵 MVC | 🟢 V. Slice | 🟠 Clean | 🔴 Hexagonal | Melhor |
-|---------|:------:|:-----------:|:--------:|:------------:|--------|
-| Duração (min) | 6,3 | **5,4** | 7,3 | 8,4 | 🟢 V. Slice 🏆 |
-| Tempo/endpoint | 1,26 | **1,08** | 1,46 | 1,68 | 🟢 V. Slice 🏆 |
-| Throughput (ep/h) | 47,7 | **55,9** | 41,0 | 35,7 | 🟢 V. Slice 🏆 |
-| Total de turns | 45 | 49 | 52 | 55 | 🔵 MVC |
-| Tool calls | 44 | 48 | 51 | 54 | 🔵 MVC |
+| Métrica | 🔵 MVC | 🟢 V.Slice | 🟠 Clean | 🔴 Hexag. | 🟤 DDD | 🟡 Event-Dr. | 🟣 CQRS | Melhor |
+|---------|:------:|:---------:|:--------:|:---------:|:------:|:------------:|:-------:|--------|
+| Duração (min) | 6,3 | 5,4 | 7,3 | 8,4 | **5,0** | 8,85 | 8,81 | 🟤 DDD 🏆 |
+| Tempo/endpoint | 1,26 | 1,08 | 1,46 | 1,68 | **1,0** | 1,77 | 1,76 | 🟤 DDD 🏆 |
+| Throughput (ep/h) | 47,7 | 55,9 | 41,0 | 35,7 | **60,0** | 33,9 | 34,1 | 🟤 DDD 🏆 |
+| Total de turns | 45 | 49 | 52 | 55 | **37** | 47 | 68 | 🟤 DDD 🏆 |
+| Tool calls | 44 | 48 | 51 | 54 | **36** | 46 | 64 | 🟤 DDD 🏆 |
 
-> Vertical Slice foi o **mais rápido** em tempo de relógio apesar de ser o mais caro —
-> a IA escreveu muito output mas sem pausa para raciocínio complexo.
-> Hexagonal foi o **mais lento**: as regras de injeção por interface geraram mais ciclos de correção.
+> **DDD foi o mais rápido** em todas as métricas de velocidade — 37 turns, 5 minutos, 60 ep/h.
+> Os Value Objects com validação no construtor deram à IA um modelo mental muito claro.
+> CQRS exigiu mais turns (68) — o padrão de handlers separados para command/query é incomum em CRUDs.
 
 ## 🐛 Erros de Desenvolvimento
 
-| Tipo | 🔵 MVC | 🟢 V. Slice | 🟠 Clean | 🔴 Hexagonal |
-|------|:------:|:-----------:|:--------:|:------------:|
-| Compilação | 3 | 2 | 1 | 3 |
-| Runtime | 1 | 0 | 0 | 1 |
-| Falhas de teste | 1 | 0 | 0 | 2 |
-| **Total** | **5** | **2** | **1** | **6** |
+| Tipo | 🔵 MVC | 🟢 V.Slice | 🟠 Clean | 🔴 Hexag. | 🟤 DDD | 🟡 Event-Dr. | 🟣 CQRS |
+|------|:------:|:---------:|:--------:|:---------:|:------:|:------------:|:-------:|
+| Compilação | 3 | 2 | 1 | 3 | 1 | 2 | 0 |
+| Runtime | 1 | 0 | 0 | 1 | 0 | 1 | 0 |
+| Falhas de teste | 1 | 0 | 0 | 2 | 0 | 2 | 2 |
+| **Total** | **5** | **2** | **1** | **6** | **1** | **5** | **2** |
 
 ```
-🟠 Clean Arch    █░░░░░░░░░  1 erro    ← menos erros 🏆
+🟠 Clean Arch    █░░░░░░░░░  1 erro    ← menos erros 🏆 (empate com DDD)
+🟤 DDD           █░░░░░░░░░  1 erro    ← menos erros 🏆 (empate com Clean)
 🟢 Vert. Slice   ██░░░░░░░░  2 erros
+🟣 CQRS          ██░░░░░░░░  2 erros
 🔵 MVC           █████░░░░░  5 erros
+🟡 Event-Driven  █████░░░░░  5 erros
 🔴 Hexagonal     ██████░░░░  6 erros   ← mais erros
 ```
 
-> Clean Architecture teve apenas **1 erro** — a estrutura rígida de interfaces e camadas
-> guiou o raciocínio da IA durante toda a sessão, resultando no código mais correto de primeira.
-
 ## ✅ Qualidade de Código
 
-| Métrica | 🔵 MVC | 🟢 V. Slice | 🟠 Clean | 🔴 Hexagonal | Melhor |
-|---------|:------:|:-----------:|:--------:|:------------:|--------|
-| LOC produção | **245** | 310 | 336 | 288 | 🔵 MVC 🏆 |
-| LOC testes | 295 | 222 | **462** | 310 | 🟠 Clean |
-| Proporção testes | 54,6% | 41,7% | **57,9%** | 51,8% | 🟠 Clean 🏆 |
-| Cobertura linha | 93% | 91,8% | **97%** | 93,6% | 🟠 Clean 🏆 |
-| Cobertura branch | — | 75% | **100%** | 60,7% | 🟠 Clean 🏆 |
+| Métrica | 🔵 MVC | 🟢 V.Slice | 🟠 Clean | 🔴 Hexag. | 🟤 DDD | 🟡 Event-Dr. | 🟣 CQRS | Melhor |
+|---------|:------:|:---------:|:--------:|:---------:|:------:|:------------:|:-------:|--------|
+| LOC produção | **245** | 310 | 336 | 288 | 295 | 373 | 312 | 🔵 MVC 🏆 |
+| LOC testes | 295 | 222 | **462** | 310 | 311 | 317 | 327 | 🟠 Clean 🏆 |
+| Cobertura linha | 93% | 91,8% | **97%** | 93,6% | 88% | 90% | 95% | 🟠 Clean 🏆 |
+| Cobertura branch | — | 75% | **100%** | 60,7% | — | — | 91,7% | 🟠 Clean 🏆 |
 
 **Cobertura de linha:**
 
 ```
 🟠 Clean Arch    ███████████████████░  97,0%  ← melhor 🏆
+🟣 CQRS          ███████████████████░  95,0%
 🔴 Hexagonal     ██████████████████░░  93,6%
 🔵 MVC           ██████████████████░░  93,0%
 🟢 Vert. Slice   █████████████████░░░  91,8%
+🟡 Event-Driven  ██████████████████░░  90,0%
+🟤 DDD           █████████████████░░░  88,0%
 ```
-
-> Clean Architecture gerou a **maior suite de testes** (462 LOC) e atingiu
-> **100% de cobertura de branch** — cada interactor teve seus próprios testes de unidade
-> isolados, sem dependência de Spring Boot Test.
 
 ## 🏗 Métricas de Arquitetura
 
-| Métrica | 🔵 MVC | 🟢 V. Slice | 🟠 Clean | 🔴 Hexagonal |
-|---------|:------:|:-----------:|:--------:|:------------:|
-| Arquivos .java criados | 12 | **23** | **27** | 19 |
-| Interfaces criadas | 1 | 1 | **6** | **6** |
-| Pacotes (profundidade) | 9 | 10 | 10 | **15** |
-| Conformidade estrutural | 10/10 | 10/10 | 10/10 | 10/10 |
-| Violações de dependência | 0 | 0 | 0 | 0 |
+| Métrica | 🔵 MVC | 🟢 V.Slice | 🟠 Clean | 🔴 Hexag. | 🟤 DDD | 🟡 Event-Dr. | 🟣 CQRS |
+|---------|:------:|:---------:|:--------:|:---------:|:------:|:------------:|:-------:|
+| Arquivos .java | 12 | 23 | **27** | 19 | 17 | 22 | **25** |
+| Interfaces | 1 | 1 | **6** | **6** | 1 | **4** | 1 |
+| Pacotes | 9 | 10 | 10 | **15** | 13 | 9 | 12 |
+| Conformidade | 10/10 | 10/10 | 10/10 | 10/10 | **8/10** | 10/10 | 10/10 |
+| Violações dep. | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
-> A IA respeitou **100% as regras de dependência** em todas as arquiteturas —
-> nenhum vazamento de camada detectado em nenhum dos 4 padrões.
+> DDD foi o único padrão com conformidade abaixo de 10/10 (8/10) — a IA criou apenas 1 interface
+> (`TaskRepository`) quando o ideal seria também interfaces para casos de uso na camada de aplicação.
+> Todas as outras arquiteturas respeitaram 100% as regras de dependência.
+
+## 📖 Guias Teóricos
+
+Cada arquitetura tem um documento explicando o conceito, diagrama visual e análise dos resultados:
+
+| Arquitetura | Documento |
+|-------------|-----------|
+| 🔵 MVC | [docs/arch-mvc.md](docs/arch-mvc.md) |
+| 🟢 Vertical Slice | [docs/arch-vertical-slice.md](docs/arch-vertical-slice.md) |
+| 🟠 Clean Architecture | [docs/arch-clean.md](docs/arch-clean.md) |
+| 🔴 Hexagonal | [docs/arch-hexagonal.md](docs/arch-hexagonal.md) |
+| 🟤 DDD Tático | [docs/arch-ddd.md](docs/arch-ddd.md) |
+| 🟡 Event-Driven | [docs/arch-event-driven.md](docs/arch-event-driven.md) |
+| 🟣 CQRS | [docs/arch-cqrs.md](docs/arch-cqrs.md) |
 
 ## 🏆 Placar — Experimento 2
 
-| Categoria | 🔵 MVC | 🟢 V. Slice | 🟠 Clean | 🔴 Hexagonal |
-|-----------|:------:|:-----------:|:--------:|:------------:|
-| Custo | 🏆 **mais barato** | | | |
-| Velocidade | | 🏆 **mais rápido** | | |
-| Menos erros | | | 🏆 **só 1 erro** | |
-| Cobertura | | | 🏆 **97% linha, 100% branch** | |
-| Conformidade | 🤝 | 🤝 | 🤝 | 🤝 |
-| E2E | 🤝 | 🤝 | 🤝 | 🤝 |
+| Categoria | 🔵 MVC | 🟢 V.Slice | 🟠 Clean | 🔴 Hexag. | 🟤 DDD | 🟡 Event-Dr. | 🟣 CQRS |
+|-----------|:------:|:---------:|:--------:|:---------:|:------:|:------------:|:-------:|
+| Custo total | | | | | | 🏆 **$2,22** | |
+| Output tokens | 🏆 **mais baixo** | | | | | | |
+| Velocidade | | | | | 🏆 **5 min / 60 ep/h** | | |
+| Menos erros | | | 🏆 **1 erro** | | 🏆 **1 erro** | | |
+| Cobertura | | | 🏆 **97% / 100% branch** | | | | |
+| Conformidade | 🤝 | 🤝 | 🤝 | 🤝 | ⚠️ 8/10 | 🤝 | 🤝 |
+| E2E | 🤝 | 🤝 | 🤝 | 🤝 | 🤝 | 🤝 | 🤝 |
 
 ## 🧠 Por Que Esses Resultados?
 
-**MVC é o mais barato porque é o padrão que a IA mais conhece.**
+**MVC domina em output tokens porque é o padrão mais treinado.**
 
-O padrão MVC do Spring Boot (`@RestController` → `@Service` → `@Repository`) está presente
-em incontáveis tutoriais e projetos públicos. A IA o executa quase de memória — poucos tokens
-de raciocínio, direto ao ponto.
+Spring Boot com `@RestController → @Service → @Repository` está presente em incontáveis tutoriais.
+A IA escreve esse padrão quase de memória — poucos tokens de raciocínio, código direto.
 
-**Vertical Slice foi o mais caro apesar de ser o mais rápido.**
+**Event-Driven foi o mais barato no total graças ao uso eficiente de cache.**
 
-Organizar por feature em vez de por camada parece simples, mas cada slice replica a estrutura
-completa: controller + use case + DTO por operação. A IA escreveu mais código (107k output tokens
-vs 27k do MVC) em menos tempo — ritmo alto, mas custo alto por output.
+O padrão de publicar eventos é verboso mas repetitivo — uma vez que o modelo entendeu o EventBus,
+usou cache intensamente para os handlers seguintes. Cache read de 2,67M tokens a $0,30/M é muito
+mais barato que output tokens a $15/M.
 
-**Clean Architecture teve menos erros porque a estrutura rígida serve de guia.**
+**DDD foi o mais rápido porque Value Objects são um contrato claro.**
 
-As 4 camadas concêntricas com a Dependency Rule bem definida no PRD deram à IA uma "trilha"
-clara a seguir. Menos ambiguidade = menos erros de caminho = menos ciclos de correção.
-O preço foi mais boilerplate: 27 arquivos, 6 interfaces, 462 LOC de testes.
+A estrutura `TaskId`, `Title`, `Description` → `Task (Aggregate Root)` → `TaskApplicationService`
+cria um fluxo unidirecional simples. A IA completou em 37 turns (vs 68 do CQRS). O custo de $2,33
+é razoável para o que entregou — mas perdeu 2 pontos de conformidade por não criar interfaces de
+use case na camada de aplicação.
 
-**Hexagonal foi o mais desafiador.**
+**Clean Architecture teve menos erros porque a Dependency Rule é um guia preciso.**
 
-O isolamento do domínio (sem nenhum import de Spring em `domain/`) e a injeção por interfaces
-(`TaskController` injeta `CreateTaskUseCase` e não `TaskService`) fogem do padrão mais comum
-nos dados de treinamento. A IA cometeu mais erros de wiring e precisou de mais ciclos de
-compilação para corrigir — 96 chamadas de API contra 72 do MVC.
+As 4 camadas concêntricas com regras explícitas no PRD deram à IA uma "trilha" sem ambiguidade.
+Resultado: 1 erro, 97% de cobertura, 100% de branch. O preço foi boilerplate: 27 arquivos, 462 LOC de testes.
+
+**CQRS foi o mais custoso por endpoint ($0,65) e exigiu mais turns (68).**
+
+Handlers separados para command e query fogem do padrão CRUD padrão nos dados de treinamento.
+A IA precisou de mais ciclos de raciocínio para montar o dispatch correto, resultando em 97
+chamadas de API — o maior número de todos.
+
+**Hexagonal foi o mais desafiador em erros (6).**
+
+O isolamento do domínio (zero imports Spring em `domain/`) e injeção por interfaces criam wiring
+complexo que a IA frequentemente errou, precisando de ciclos de compilação extras.
+
+**Vertical Slice: o paradoxo custo-velocidade.**
+
+Mais caro ($3,84) mas segundo mais rápido (5,4 min). A IA escreve muito e rápido — cada slice
+replica a estrutura completa (controller + use case + DTO), gerando 107k output tokens vs 27k do MVC.
 
 ---
 
@@ -396,7 +482,6 @@ java -version      # Java 21+
 mvn -version       # Maven 3.9+
 python --version   # Python 3.10+
 claude --version   # Claude Code CLI
-cloc               # opcional, para LOC
 ```
 
 ### Experimento 1 — Java vs Kotlin
@@ -420,12 +505,15 @@ Abra o Claude Code na pasta `benchmark/` com `claude-sonnet-4-6` e peça:
 "execute o benchmark-arch-mvc.md"
 ```
 
-| Arquivo | Arquitetura |
-|---------|-------------|
-| `benchmark-arch-mvc.md` | Layered MVC |
-| `benchmark-arch-vertical-slice.md` | Vertical Slice |
-| `benchmark-arch-clean.md` | Clean Architecture |
-| `benchmark-arch-hexagonal.md` | Hexagonal (Ports & Adapters) |
+| Arquivo | Arquitetura | Guia teórico |
+|---------|-------------|--------------|
+| `benchmark-arch-mvc.md` | Layered MVC | [docs/arch-mvc.md](docs/arch-mvc.md) |
+| `benchmark-arch-vertical-slice.md` | Vertical Slice | [docs/arch-vertical-slice.md](docs/arch-vertical-slice.md) |
+| `benchmark-arch-clean.md` | Clean Architecture | [docs/arch-clean.md](docs/arch-clean.md) |
+| `benchmark-arch-hexagonal.md` | Hexagonal (Ports & Adapters) | [docs/arch-hexagonal.md](docs/arch-hexagonal.md) |
+| `benchmark-arch-ddd.md` | DDD Tático | [docs/arch-ddd.md](docs/arch-ddd.md) |
+| `benchmark-arch-event-driven.md` | Event-Driven | [docs/arch-event-driven.md](docs/arch-event-driven.md) |
+| `benchmark-arch-cqrs.md` | CQRS | [docs/arch-cqrs.md](docs/arch-cqrs.md) |
 
 ### Gerar relatórios HTML
 
@@ -433,7 +521,7 @@ Abra o Claude Code na pasta `benchmark/` com `claude-sonnet-4-6` e peça:
 # Experimento 1 — Java vs Kotlin
 python metrics/report.py
 
-# Experimento 2 — Arquiteturas
+# Experimento 2 — Arquiteturas (7 padrões)
 python metrics/report.py --mode arch
 ```
 
@@ -449,10 +537,13 @@ benchmark/
 ├── java-implementation-mode2/        ← Exp. 1 Java Modo 2
 ├── kotlin-implementation-mode2/      ← Exp. 1 Kotlin Modo 2
 ├── arch-benchmark/
-│   ├── mvc/                          ← Exp. 2 MVC (pom.xml + mvnw.cmd)
+│   ├── mvc/                          ← Exp. 2 MVC
 │   ├── vertical-slice/               ← Exp. 2 Vertical Slice
 │   ├── clean-architecture/           ← Exp. 2 Clean Architecture
-│   └── hexagonal/                    ← Exp. 2 Hexagonal
+│   ├── hexagonal/                    ← Exp. 2 Hexagonal
+│   ├── ddd/                          ← Exp. 2 DDD Tático
+│   ├── event-driven/                 ← Exp. 2 Event-Driven
+│   └── cqrs/                         ← Exp. 2 CQRS
 ├── .claude/spec/                     ← PRDs detalhados por benchmark
 ├── spec/task-definition.md           ← especificação CRUD compartilhada
 └── metrics/
@@ -466,7 +557,7 @@ benchmark/
 
 <div align="center">
 
-**Executado com `claude-sonnet-4-6` · 2026-06-05**  
+**Executado com `claude-sonnet-4-6` · 2026-06-06**  
 Rode você mesmo e compare com os seus resultados.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
