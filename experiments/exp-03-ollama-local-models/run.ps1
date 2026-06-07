@@ -96,7 +96,8 @@ $buildSuccess = $false
 $totalTurns   = 0
 $compileErrors = 0
 
-$INIT_MSG = "Read benchmark-$GUIDE_SLUG.md carefully. Implement the complete Task Manager REST API following Step 4 exactly: create all required packages and Java files, implement all 5 endpoints (GET /tasks, POST /tasks returning 201, GET /tasks/{id}, PUT /tasks/{id}, DELETE /tasks/{id} returning 204), apply all validations (title required 400, title max 200 chars, description max 1000 chars, ID not found 404). Follow the mandatory package structure shown in the guide."
+# Mensagem inicial clara e direta para criacao de arquivos
+$INIT_MSG = "Create a complete Java 21 Spring Boot 3.2 Task Manager REST API implementing the $ARCH_NAME architecture as described in benchmark-$GUIDE_SLUG.md Step 4. CREATE all the Java source files now. Use the exact package structure from the guide. Implement all 5 endpoints: GET /tasks (200), POST /tasks (201), GET /tasks/{id} (200/404), PUT /tasks/{id} (200/400/404), DELETE /tasks/{id} (204/404). Validations: empty/missing title returns 400, title over 200 chars returns 400, description over 1000 chars returns 400, unknown id returns 404 with body {`"error`":`"Task not found`"}."
 
 Write-Host ""
 Write-Host "[2/4] Aider implementando $ARCH_NAME (auto mode)..." -ForegroundColor Cyan
@@ -107,8 +108,8 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
         $msg = $INIT_MSG
     } else {
         $errorLines = ($lastBuildOutput | Where-Object { $_ -match "\[ERROR\]" } | Select-Object -First 20) -join "`n"
-        $msg = "Fix these compilation errors:`n$errorLines"
-        Write-Host "  Tentativa $($attempt+1): enviando erros para correcao..." -ForegroundColor Yellow
+        $msg = "The code has compilation errors. Fix ALL of them so the project compiles successfully:`n`n$errorLines"
+        Write-Host "  Tentativa $($attempt+1): corrigindo erros de compilacao..." -ForegroundColor Yellow
         $compileErrors++
     }
 
@@ -121,7 +122,15 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
 
     $totalTurns++
 
-    Write-Host "  Compilando..." -ForegroundColor DarkGray
+    # Verificar se algum arquivo foi criado
+    $javaFiles = Get-ChildItem -Path $IMPL_DIR -Filter "*.java" -Recurse -ErrorAction SilentlyContinue
+    if ($javaFiles.Count -eq 0 -and $attempt -eq 0) {
+        Write-Host "  AVISO: Nenhum arquivo Java criado. O modelo pode nao ter gerado codigo." -ForegroundColor Red
+        Write-Host "  Verifique o output do Aider acima e tente rodar novamente." -ForegroundColor Yellow
+        break
+    }
+
+    Write-Host "  Compilando ($($javaFiles.Count) arquivos Java)..." -ForegroundColor DarkGray
     $lastBuildOutput = & ".\mvnw.cmd" compile 2>&1
 
     if ($lastBuildOutput -match "BUILD SUCCESS") {
@@ -159,15 +168,18 @@ python tools/ollama_collector.py --collect --model $MODEL_NAME --arch $ARCH_NAME
 
 # --- Resumo ---
 
+$javaCount = (Get-ChildItem -Path $IMPL_DIR -Filter "*.java" -Recurse -ErrorAction SilentlyContinue).Count
+
 Write-Host ""
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host " RESULTADO: $MODEL_NAME / $ARCH_NAME" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Build     : $(if ($buildSuccess) { 'SUCCESS' } else { 'FAILURE' })" -ForegroundColor $(if ($buildSuccess) { "Green" } else { "Red" })
-Write-Host " Testes    : $(if ($testSuccess)  { 'SUCCESS' } else { 'FAILURE' })" -ForegroundColor $(if ($testSuccess)  { "Green" } else { "Red" })
-Write-Host " Tentativas: $totalTurns (erros de compile: $compileErrors)" -ForegroundColor White
+Write-Host " Arquivos Java : $javaCount" -ForegroundColor White
+Write-Host " Build         : $(if ($buildSuccess) { 'SUCCESS' } else { 'FAILURE' })" -ForegroundColor $(if ($buildSuccess) { "Green" } else { "Red" })
+Write-Host " Testes        : $(if ($testSuccess)  { 'SUCCESS' } else { 'FAILURE' })" -ForegroundColor $(if ($testSuccess)  { "Green" } else { "Red" })
+Write-Host " Tentativas    : $totalTurns (erros compile: $compileErrors)" -ForegroundColor White
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Resultados em: experiments/exp-03-ollama-local-models/results/" -ForegroundColor Green
-Write-Host "Preencha manualmente no JSON: tokens_per_sec, arch_conformance, e2e" -ForegroundColor Yellow
+Write-Host "Preencha no JSON: tokens_per_sec, arch_conformance, e2e (12 cenarios)" -ForegroundColor Yellow
 Write-Host ""
