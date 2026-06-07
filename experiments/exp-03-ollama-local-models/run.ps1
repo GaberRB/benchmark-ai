@@ -1,4 +1,5 @@
-﻿# run.ps1 - Benchmark completo Ollama + Aider (implementacao + testes + E2E + metricas)
+﻿# run.ps1 - Benchmark completo Ollama + Aider
+# O modelo LLM cria todos os diretorios e arquivos Java do zero.
 # Uso: .\run.ps1                    (menu interativo)
 #      .\run.ps1 -Model 2 -Arch 3   (parametros diretos)
 
@@ -9,7 +10,6 @@ param(
 )
 
 $BASE_DIR = "C:\Users\grios\OneDrive\Desktop\benchmark"
-$PKG_BASE = "src\main\java\com\benchmark\taskmanager"
 
 $MODELS = [ordered]@{
     "1" = @{ Name = "deepseek-coder-v2:16b"; Dir = "deepseek-coder"; Label = "Deepseek Coder V2 16B  (~9 GB)" }
@@ -35,150 +35,6 @@ $ARCHS = [ordered]@{
 function Log($msg, $color = "White") {
     $ts = Get-Date -Format "HH:mm:ss"
     Write-Host "[$ts] $msg" -ForegroundColor $color
-}
-
-# Retorna os caminhos esperados E cria apenas os diretorios (nao os arquivos)
-# O Aider cria os arquivos .java do zero — isso e o que medimos no benchmark
-function Get-ExpectedFiles {
-    param([string]$ImplDir, [string]$ArchName)
-    $pkg = $PKG_BASE
-    $files = switch ($ArchName) {
-        "mvc" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\model\Task.java",
-            "$pkg\dto\CreateTaskRequest.java",
-            "$pkg\dto\UpdateTaskRequest.java",
-            "$pkg\repository\TaskRepository.java",
-            "$pkg\repository\InMemoryTaskRepository.java",
-            "$pkg\service\TaskService.java",
-            "$pkg\controller\TaskController.java",
-            "$pkg\exception\TaskNotFoundException.java",
-            "$pkg\exception\GlobalExceptionHandler.java"
-        )}
-        "vertical-slice" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\tasks\Task.java",
-            "$pkg\tasks\TaskRepository.java",
-            "$pkg\tasks\InMemoryTaskRepository.java",
-            "$pkg\tasks\CreateTask\CreateTaskRequest.java",
-            "$pkg\tasks\CreateTask\CreateTaskHandler.java",
-            "$pkg\tasks\GetTask\GetTaskHandler.java",
-            "$pkg\tasks\ListTasks\ListTasksHandler.java",
-            "$pkg\tasks\UpdateTask\UpdateTaskRequest.java",
-            "$pkg\tasks\UpdateTask\UpdateTaskHandler.java",
-            "$pkg\tasks\DeleteTask\DeleteTaskHandler.java",
-            "$pkg\tasks\TaskController.java",
-            "$pkg\tasks\GlobalExceptionHandler.java",
-            "$pkg\tasks\TaskNotFoundException.java"
-        )}
-        "clean-architecture" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\domain\Task.java",
-            "$pkg\domain\TaskRepository.java",
-            "$pkg\application\TaskService.java",
-            "$pkg\application\CreateTaskCommand.java",
-            "$pkg\application\UpdateTaskCommand.java",
-            "$pkg\infrastructure\InMemoryTaskRepository.java",
-            "$pkg\interfaces\TaskController.java",
-            "$pkg\interfaces\CreateTaskRequest.java",
-            "$pkg\interfaces\UpdateTaskRequest.java",
-            "$pkg\interfaces\TaskNotFoundException.java",
-            "$pkg\interfaces\GlobalExceptionHandler.java"
-        )}
-        "hexagonal" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\domain\Task.java",
-            "$pkg\application\ports\in\CreateTaskUseCase.java",
-            "$pkg\application\ports\in\GetTaskUseCase.java",
-            "$pkg\application\ports\in\ListTasksUseCase.java",
-            "$pkg\application\ports\in\UpdateTaskUseCase.java",
-            "$pkg\application\ports\in\DeleteTaskUseCase.java",
-            "$pkg\application\ports\out\TaskRepository.java",
-            "$pkg\application\service\TaskService.java",
-            "$pkg\adapters\in\web\TaskController.java",
-            "$pkg\adapters\in\web\CreateTaskRequest.java",
-            "$pkg\adapters\in\web\UpdateTaskRequest.java",
-            "$pkg\adapters\in\web\GlobalExceptionHandler.java",
-            "$pkg\adapters\out\persistence\InMemoryTaskRepository.java",
-            "$pkg\exception\TaskNotFoundException.java"
-        )}
-        "ddd" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\domain\model\Task.java",
-            "$pkg\domain\model\TaskId.java",
-            "$pkg\domain\model\Title.java",
-            "$pkg\domain\model\Description.java",
-            "$pkg\domain\repository\TaskRepository.java",
-            "$pkg\domain\exception\TaskNotFoundException.java",
-            "$pkg\domain\exception\InvalidValueException.java",
-            "$pkg\application\TaskApplicationService.java",
-            "$pkg\application\dto\CreateTaskCommand.java",
-            "$pkg\application\dto\UpdateTaskCommand.java",
-            "$pkg\application\dto\TaskDto.java",
-            "$pkg\infrastructure\persistence\InMemoryTaskRepository.java",
-            "$pkg\interfaces\web\TaskController.java",
-            "$pkg\interfaces\web\CreateTaskRequest.java",
-            "$pkg\interfaces\web\UpdateTaskRequest.java",
-            "$pkg\interfaces\web\GlobalExceptionHandler.java"
-        )}
-        "event-driven" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\events\DomainEvent.java",
-            "$pkg\events\TaskCreatedEvent.java",
-            "$pkg\events\TaskUpdatedEvent.java",
-            "$pkg\events\TaskDeletedEvent.java",
-            "$pkg\events\EventHandler.java",
-            "$pkg\events\EventBus.java",
-            "$pkg\events\InMemoryEventBus.java",
-            "$pkg\handlers\TaskCreatedHandler.java",
-            "$pkg\handlers\TaskUpdatedHandler.java",
-            "$pkg\handlers\TaskDeletedHandler.java",
-            "$pkg\model\Task.java",
-            "$pkg\model\TaskStatus.java",
-            "$pkg\repository\TaskRepository.java",
-            "$pkg\repository\InMemoryTaskRepository.java",
-            "$pkg\service\TaskService.java",
-            "$pkg\api\TaskController.java",
-            "$pkg\api\CreateTaskRequest.java",
-            "$pkg\api\UpdateTaskRequest.java",
-            "$pkg\api\TaskResponse.java",
-            "$pkg\api\TaskNotFoundException.java",
-            "$pkg\api\GlobalExceptionHandler.java"
-        )}
-        "cqrs" { @(
-            "$pkg\TaskManagerApplication.java",
-            "$pkg\commands\create\CreateTaskCommand.java",
-            "$pkg\commands\create\CreateTaskHandler.java",
-            "$pkg\commands\update\UpdateTaskCommand.java",
-            "$pkg\commands\update\UpdateTaskHandler.java",
-            "$pkg\commands\delete\DeleteTaskCommand.java",
-            "$pkg\commands\delete\DeleteTaskHandler.java",
-            "$pkg\queries\get\GetTaskQuery.java",
-            "$pkg\queries\get\GetTaskHandler.java",
-            "$pkg\queries\list\ListTasksQuery.java",
-            "$pkg\queries\list\ListTasksHandler.java",
-            "$pkg\model\Task.java",
-            "$pkg\model\TaskRepository.java",
-            "$pkg\model\InMemoryTaskRepository.java",
-            "$pkg\api\TaskController.java",
-            "$pkg\api\CreateTaskRequest.java",
-            "$pkg\api\UpdateTaskRequest.java",
-            "$pkg\api\GlobalExceptionHandler.java",
-            "$pkg\api\TaskNotFoundException.java"
-        )}
-        default { @() }
-    }
-
-    # Criar apenas os diretorios — Aider cria os arquivos .java
-    foreach ($rel in $files) {
-        $full = Join-Path $ImplDir $rel
-        New-Item -ItemType Directory -Force -Path (Split-Path $full -Parent) | Out-Null
-    }
-    # Diretorio de testes tbm
-    New-Item -ItemType Directory -Force -Path (Join-Path $ImplDir "src\test\java\com\benchmark\taskmanager") | Out-Null
-
-    Log "  Diretorios criados. Aider vai criar os $($files.Count) arquivos .java." "DarkGray"
-    return $files | ForEach-Object { Join-Path $ImplDir $_ }
 }
 
 function Wait-ForApp {
@@ -292,8 +148,8 @@ function Update-ResultJson {
     $json.code_quality.test_lines_of_code       = $LOC.Test
     $json.code_quality.test_coverage_line_pct   = $Coverage.Line
     $json.code_quality.test_coverage_branch_pct = $Coverage.Branch
-    $json.errors.compile_errors = $CompileErrors
-    $json.errors.test_failures  = if ($TestSuccess) { 0 } else { 1 }
+    $json.errors.compile_errors  = $CompileErrors
+    $json.errors.test_failures   = if ($TestSuccess) { 0 } else { 1 }
     $json.iterations.total_turns = $TotalTurns
     $json | ConvertTo-Json -Depth 10 | Out-File -FilePath $JsonPath -Encoding utf8
 }
@@ -355,18 +211,7 @@ Set-Location $BASE_DIR
 python tools/ollama_collector.py --start --model $MODEL_NAME --arch $ARCH_NAME
 
 # =====================================================================
-# PASSO 2 - Preparar diretorios (Aider cria os arquivos)
-# =====================================================================
-
-Log "[2/6] Preparando diretorios — Aider criara os arquivos .java..." "Cyan"
-$expectedFiles = Get-ExpectedFiles -ImplDir $IMPL_DIR -ArchName $ARCH_NAME
-
-# Passa os caminhos esperados via --file (mesmo que ainda nao existam)
-# Aider cria o arquivo quando o modelo gera o conteudo para ele
-$fileArgs = $expectedFiles | ForEach-Object { @("--file", $_) }
-
-# =====================================================================
-# PASSO 3 - Aider implementa + loop compile
+# PASSO 2 - Aider cria tudo do zero (sem pre-criacao de arquivos/dirs)
 # =====================================================================
 
 Set-Location $IMPL_DIR
@@ -376,9 +221,11 @@ $buildSuccess  = $false
 $totalTurns    = 0
 $compileErrors = 0
 
-$INIT_MSG = "Create and implement the complete Task Manager REST API in the $ARCH_NAME architecture. Follow benchmark-$GUIDE_SLUG.md Step 4 exactly. Create ALL the Java files listed above with full implementation — do not leave any file empty. Requirements: all 5 endpoints (GET /tasks 200, POST /tasks 201, GET /tasks/{id} 200/404, PUT /tasks/{id} 200/400/404, DELETE /tasks/{id} 204/404), validations (missing/empty title=400 body:{error:title is required}, title>200chars=400, description>1000chars=400, unknown id=404 body:{error:Task not found}), UUID for IDs, ConcurrentHashMap for storage, Spring Boot 3.2 annotations."
+# Instrucao inicial: o modelo cria TUDO — diretorios e arquivos
+$INIT_MSG = "Read benchmark-$GUIDE_SLUG.md and task-definition.md. Implement the complete Task Manager REST API from scratch in $ARCH_NAME architecture. Create ALL directories and Java source files as specified in Step 4 of the guide. The only files that exist are pom.xml and mvnw.cmd. You must create: the full src/main/java/com/benchmark/taskmanager/ package tree, all Java classes, and src/test/java tests. Requirements: Spring Boot 3.2, Java 21, all 5 endpoints (GET /tasks 200, POST /tasks 201, GET /tasks/{id} 200/404, PUT /tasks/{id} 200/400/404, DELETE /tasks/{id} 204/404), validations (missing/empty title=400 body:{error:title is required}, title>200chars=400, description>1000chars=400, unknown id=404 body:{error:Task not found}), UUID for IDs, ConcurrentHashMap. Follow the mandatory package structure exactly."
 
-Log "[3/6] Aider criando e implementando $ARCH_NAME..." "Cyan"
+Log "[2/6] Aider criando projeto $ARCH_NAME do zero..." "Cyan"
+Log "  O modelo cria todos os diretorios e arquivos Java." "DarkGray"
 
 while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
     if ($attempt -eq 0) {
@@ -393,7 +240,6 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
     & aider --model "ollama/$MODEL_NAME" `
             --read $TASK_DEF `
             --read $GUIDE `
-            @fileArgs `
             --message $msg `
             --yes `
             --no-auto-commits
@@ -401,13 +247,16 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
     $totalTurns++
 
     $javaCount = (Get-ChildItem -Path $IMPL_DIR -Filter "*.java" -Recurse -ErrorAction SilentlyContinue).Count
+
     if ($javaCount -eq 0 -and $attempt -eq 0) {
-        Log "  AVISO: nenhum arquivo Java foi criado. O modelo nao gerou codigo." "Red"
-        Log "  Verifique se o modelo Ollama esta respondendo corretamente." "Yellow"
+        Log "" "White"
+        Log "  RESULTADO: nenhum arquivo Java criado." "Red"
+        Log "  O modelo nao gerou codigo neste run — registrado como FAILURE." "Red"
+        Log "  Isso e um resultado valido do benchmark." "Yellow"
         break
     }
 
-    Log "  Compilando ($javaCount arquivos Java)..." "DarkGray"
+    Log "  Compilando ($javaCount arquivos Java encontrados)..." "DarkGray"
     $lastBuildOutput = & ".\mvnw.cmd" compile 2>&1
 
     if ($lastBuildOutput -match "BUILD SUCCESS") {
@@ -420,10 +269,10 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
 }
 
 # =====================================================================
-# PASSO 4 - Testes unitarios
+# PASSO 3 - Testes unitarios
 # =====================================================================
 
-Log "[4/6] Rodando testes unitarios..." "Cyan"
+Log "[3/6] Testes unitarios..." "Cyan"
 $testSuccess = $false
 if ($buildSuccess) {
     $testOutput = & ".\mvnw.cmd" test 2>&1
@@ -437,10 +286,10 @@ if ($buildSuccess) {
 }
 
 # =====================================================================
-# PASSO 5 - E2E
+# PASSO 4 - E2E
 # =====================================================================
 
-Log "[5/6] Testes E2E (12 cenarios)..." "Cyan"
+Log "[4/6] Testes E2E (12 cenarios)..." "Cyan"
 $e2eResult = @{ Passed = 0; Failed = 12; Failures = @() }
 $appProcess = $null
 
@@ -464,14 +313,19 @@ if ($buildSuccess) {
 }
 
 # =====================================================================
+# PASSO 5 - LOC e cobertura
+# =====================================================================
+
+Log "[5/6] Calculando LOC e cobertura..." "Cyan"
+$coverage = Get-Coverage -ImplDir $IMPL_DIR
+$loc      = Get-LOC -ImplDir $IMPL_DIR
+Log "  LOC main=$($loc.Main) test=$($loc.Test) | Cobertura linha=$($coverage.Line)% branch=$($coverage.Branch)%" "DarkGray"
+
+# =====================================================================
 # PASSO 6 - Metricas finais + JSON
 # =====================================================================
 
-Log "[6/6] Coletando metricas e atualizando JSON..." "Cyan"
-
-$coverage = Get-Coverage -ImplDir $IMPL_DIR
-$loc      = Get-LOC -ImplDir $IMPL_DIR
-
+Log "[6/6] Coletando metricas finais..." "Cyan"
 Set-Location $BASE_DIR
 python tools/ollama_collector.py --collect --model $MODEL_NAME --arch $ARCH_NAME --impl-dir $IMPL_DIR
 
@@ -483,7 +337,7 @@ if ($jsonFile) {
     Update-ResultJson -JsonPath $jsonFile.FullName `
                       -E2E $e2eResult -Coverage $coverage -LOC $loc `
                       -CompileErrors $compileErrors -TestSuccess $testSuccess -TotalTurns $totalTurns
-    Log "  JSON: $($jsonFile.Name)" "DarkGray"
+    Log "  JSON atualizado: $($jsonFile.Name)" "DarkGray"
 }
 
 # =====================================================================
