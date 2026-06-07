@@ -25,7 +25,7 @@ $ARCHS = [ordered]@{
     "4" = @{ Name = "hexagonal";          Dir = "hexagonal" }
     "5" = @{ Name = "ddd";                Dir = "ddd" }
     "6" = @{ Name = "event-driven";       Dir = "event-driven" }
-    "7" = @{ Name = "cqrs";              Dir = "cqrs" }
+    "7" = @{ Name = "cqrs";               Dir = "cqrs" }
 }
 
 # =====================================================================
@@ -37,7 +37,9 @@ function Log($msg, $color = "White") {
     Write-Host "[$ts] $msg" -ForegroundColor $color
 }
 
-function New-Stubs {
+# Retorna os caminhos esperados E cria apenas os diretorios (nao os arquivos)
+# O Aider cria os arquivos .java do zero — isso e o que medimos no benchmark
+function Get-ExpectedFiles {
     param([string]$ImplDir, [string]$ArchName)
     $pkg = $PKG_BASE
     $files = switch ($ArchName) {
@@ -166,17 +168,16 @@ function New-Stubs {
         )}
         default { @() }
     }
+
+    # Criar apenas os diretorios — Aider cria os arquivos .java
     foreach ($rel in $files) {
         $full = Join-Path $ImplDir $rel
         New-Item -ItemType Directory -Force -Path (Split-Path $full -Parent) | Out-Null
-        if (-not (Test-Path $full)) { "" | Out-File -FilePath $full -Encoding utf8 }
     }
-    $testRoot = Join-Path $ImplDir "src\test\java\com\benchmark\taskmanager"
-    New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
-    $testFile = Join-Path $testRoot "TaskManagerApplicationTests.java"
-    if (-not (Test-Path $testFile)) { "" | Out-File -FilePath $testFile -Encoding utf8 }
+    # Diretorio de testes tbm
+    New-Item -ItemType Directory -Force -Path (Join-Path $ImplDir "src\test\java\com\benchmark\taskmanager") | Out-Null
 
-    Log "  $($files.Count + 1) stub files criados." "DarkGray"
+    Log "  Diretorios criados. Aider vai criar os $($files.Count) arquivos .java." "DarkGray"
     return $files | ForEach-Object { Join-Path $ImplDir $_ }
 }
 
@@ -201,67 +202,53 @@ function Run-E2E {
     $passed = 0
     $failures = @()
 
-    function Check($num, $expected, $code, $body = "") {
+    function Check($num, $expected, $code) {
         if ($code -eq $expected) {
             $script:passed++
             Log "  E2E-$num [PASS] $code" "Green"
         } else {
-            $script:failures += "E2E-$num esperado $expected obteve $code"
+            $script:failures += "E2E-$num esperado=$expected obteve=$code"
             Log "  E2E-$num [FAIL] $code (esperado $expected)" "Red"
         }
-        return $body
     }
 
-    # 01 - GET /tasks lista vazia
     $r = curl.exe -s -w "`n%{http_code}" "$BASE_URL/tasks" 2>$null
-    $parts = $r -split "`n"
-    Check "01" "200" $parts[-1].Trim() | Out-Null
+    Check "01" "200" ($r -split "`n")[-1].Trim()
 
-    # 02 - POST /tasks cria tarefa
     $r = curl.exe -s -w "`n%{http_code}" -X POST "$BASE_URL/tasks" -H "Content-Type: application/json" -d '{"title":"Test Task","description":"Desc"}' 2>$null
     $parts = $r -split "`n"
-    Check "02" "201" $parts[-1].Trim() | Out-Null
+    Check "02" "201" $parts[-1].Trim()
     $TASK_ID = try { ($parts[0] | ConvertFrom-Json).id } catch { "unknown" }
 
-    # 03 - POST body vazio
     $r = curl.exe -s -w "`n%{http_code}" -X POST "$BASE_URL/tasks" -H "Content-Type: application/json" -d '{}' 2>$null
-    Check "03" "400" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "03" "400" ($r -split "`n")[-1].Trim()
 
-    # 04 - POST title vazio
     $r = curl.exe -s -w "`n%{http_code}" -X POST "$BASE_URL/tasks" -H "Content-Type: application/json" -d '{"title":""}' 2>$null
-    Check "04" "400" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "04" "400" ($r -split "`n")[-1].Trim()
 
-    # 05 - GET /tasks com 1 item
     $r = curl.exe -s -w "`n%{http_code}" "$BASE_URL/tasks" 2>$null
-    Check "05" "200" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "05" "200" ($r -split "`n")[-1].Trim()
 
-    # 06 - GET /tasks/{id} existente
     $r = curl.exe -s -w "`n%{http_code}" "$BASE_URL/tasks/$TASK_ID" 2>$null
-    Check "06" "200" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "06" "200" ($r -split "`n")[-1].Trim()
 
-    # 07 - GET /tasks/id-invalido
     $r = curl.exe -s -w "`n%{http_code}" "$BASE_URL/tasks/id-invalido-xyz" 2>$null
-    Check "07" "404" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "07" "404" ($r -split "`n")[-1].Trim()
 
-    # 08 - PUT /tasks/{id} atualiza
     $r = curl.exe -s -w "`n%{http_code}" -X PUT "$BASE_URL/tasks/$TASK_ID" -H "Content-Type: application/json" -d '{"title":"Updated","completed":true}' 2>$null
-    Check "08" "200" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "08" "200" ($r -split "`n")[-1].Trim()
 
-    # 09 - PUT /tasks/id-invalido
     $r = curl.exe -s -w "`n%{http_code}" -X PUT "$BASE_URL/tasks/id-invalido-xyz" -H "Content-Type: application/json" -d '{"title":"X"}' 2>$null
-    Check "09" "404" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "09" "404" ($r -split "`n")[-1].Trim()
 
-    # 10 - DELETE /tasks/{id}
     $r = curl.exe -s -w "`n%{http_code}" -X DELETE "$BASE_URL/tasks/$TASK_ID" 2>$null
-    Check "10" "204" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "10" "204" ($r -split "`n")[-1].Trim()
 
-    # 11 - DELETE /tasks/id-invalido
     $r = curl.exe -s -w "`n%{http_code}" -X DELETE "$BASE_URL/tasks/id-invalido-xyz" 2>$null
-    Check "11" "404" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "11" "404" ($r -split "`n")[-1].Trim()
 
-    # 12 - GET tarefa deletada
     $r = curl.exe -s -w "`n%{http_code}" "$BASE_URL/tasks/$TASK_ID" 2>$null
-    Check "12" "404" ($r -split "`n")[-1].Trim() | Out-Null
+    Check "12" "404" ($r -split "`n")[-1].Trim()
 
     return @{ Passed = $passed; Failed = 12 - $passed; Failures = $failures }
 }
@@ -271,46 +258,44 @@ function Get-Coverage {
     $csv = Join-Path $ImplDir "target\site\jacoco\jacoco.csv"
     if (-not (Test-Path $csv)) { return @{ Line = 0.0; Branch = 0.0 } }
     $data = Import-Csv $csv
-    $covered = ($data | Measure-Object -Property LINE_COVERED -Sum).Sum
-    $missed  = ($data | Measure-Object -Property LINE_MISSED  -Sum).Sum
-    $total   = $covered + $missed
-    $linePct = if ($total -gt 0) { [math]::Round($covered / $total * 100, 1) } else { 0.0 }
-
-    $bcovered = ($data | Measure-Object -Property BRANCH_COVERED -Sum).Sum
-    $bmissed  = ($data | Measure-Object -Property BRANCH_MISSED  -Sum).Sum
-    $btotal   = $bcovered + $bmissed
-    $branchPct = if ($btotal -gt 0) { [math]::Round($bcovered / $btotal * 100, 1) } else { 0.0 }
-
-    return @{ Line = $linePct; Branch = $branchPct }
+    $lc = ($data | Measure-Object -Property LINE_COVERED -Sum).Sum
+    $lm = ($data | Measure-Object -Property LINE_MISSED  -Sum).Sum
+    $bc = ($data | Measure-Object -Property BRANCH_COVERED -Sum).Sum
+    $bm = ($data | Measure-Object -Property BRANCH_MISSED  -Sum).Sum
+    return @{
+        Line   = if (($lc+$lm) -gt 0) { [math]::Round($lc/($lc+$lm)*100,1) } else { 0.0 }
+        Branch = if (($bc+$bm) -gt 0) { [math]::Round($bc/($bc+$bm)*100,1) } else { 0.0 }
+    }
 }
 
 function Get-LOC {
     param([string]$ImplDir)
-    $mainSrc = Join-Path $ImplDir "src\main\java"
-    $testSrc = Join-Path $ImplDir "src\test\java"
-    $mainLoc = (Get-ChildItem -Path $mainSrc -Filter "*.java" -Recurse -ErrorAction SilentlyContinue |
-                Get-Content | Where-Object { $_.Trim() -ne "" -and $_ -notmatch "^\s*//" }).Count
-    $testLoc = (Get-ChildItem -Path $testSrc -Filter "*.java" -Recurse -ErrorAction SilentlyContinue |
-                Get-Content | Where-Object { $_.Trim() -ne "" -and $_ -notmatch "^\s*//" }).Count
-    return @{ Main = $mainLoc; Test = $testLoc }
+    $count = { param($path)
+        (Get-ChildItem -Path $path -Filter "*.java" -Recurse -ErrorAction SilentlyContinue |
+         Get-Content -ErrorAction SilentlyContinue |
+         Where-Object { $_.Trim() -ne "" -and $_ -notmatch "^\s*//" }).Count
+    }
+    return @{
+        Main = (& $count (Join-Path $ImplDir "src\main\java"))
+        Test = (& $count (Join-Path $ImplDir "src\test\java"))
+    }
 }
 
 function Update-ResultJson {
     param($JsonPath, $E2E, $Coverage, $LOC, $CompileErrors, $TestSuccess, $TotalTurns)
     if (-not (Test-Path $JsonPath)) { return }
     $json = Get-Content $JsonPath -Raw | ConvertFrom-Json
-    $json.e2e.passed          = $E2E.Passed
-    $json.e2e.failed          = $E2E.Failed
-    $json.e2e.failure_details = $E2E.Failures
-    $json.code_quality.lines_of_code          = $LOC.Main
-    $json.code_quality.test_lines_of_code     = $LOC.Test
+    $json.e2e.passed            = $E2E.Passed
+    $json.e2e.failed            = $E2E.Failed
+    $json.e2e.failure_details   = $E2E.Failures
+    $json.code_quality.lines_of_code            = $LOC.Main
+    $json.code_quality.test_lines_of_code       = $LOC.Test
     $json.code_quality.test_coverage_line_pct   = $Coverage.Line
     $json.code_quality.test_coverage_branch_pct = $Coverage.Branch
     $json.errors.compile_errors = $CompileErrors
     $json.errors.test_failures  = if ($TestSuccess) { 0 } else { 1 }
     $json.iterations.total_turns = $TotalTurns
     $json | ConvertTo-Json -Depth 10 | Out-File -FilePath $JsonPath -Encoding utf8
-    Log "  JSON atualizado: $JsonPath" "DarkGray"
 }
 
 # =====================================================================
@@ -370,12 +355,15 @@ Set-Location $BASE_DIR
 python tools/ollama_collector.py --start --model $MODEL_NAME --arch $ARCH_NAME
 
 # =====================================================================
-# PASSO 2 - Criar stubs
+# PASSO 2 - Preparar diretorios (Aider cria os arquivos)
 # =====================================================================
 
-Log "[2/6] Criando estrutura de arquivos stub..." "Cyan"
-$stubFiles = New-Stubs -ImplDir $IMPL_DIR -ArchName $ARCH_NAME
-$fileArgs = $stubFiles | Where-Object { Test-Path $_ } | ForEach-Object { @("--file", $_) }
+Log "[2/6] Preparando diretorios — Aider criara os arquivos .java..." "Cyan"
+$expectedFiles = Get-ExpectedFiles -ImplDir $IMPL_DIR -ArchName $ARCH_NAME
+
+# Passa os caminhos esperados via --file (mesmo que ainda nao existam)
+# Aider cria o arquivo quando o modelo gera o conteudo para ele
+$fileArgs = $expectedFiles | ForEach-Object { @("--file", $_) }
 
 # =====================================================================
 # PASSO 3 - Aider implementa + loop compile
@@ -388,9 +376,9 @@ $buildSuccess  = $false
 $totalTurns    = 0
 $compileErrors = 0
 
-$INIT_MSG = "Implement the complete Task Manager REST API in the $ARCH_NAME architecture. The source files are already created — implement each one fully following benchmark-$GUIDE_SLUG.md Step 4. Mandatory package structure, all 5 endpoints (GET /tasks 200, POST /tasks 201, GET /tasks/{id} 200/404, PUT /tasks/{id} 200/400/404, DELETE /tasks/{id} 204/404), all validations (empty title=400, title>200chars=400, description>1000chars=400, unknown id=404 body:{error:Task not found}). Use UUID for IDs. Store in ConcurrentHashMap. Do not leave files empty."
+$INIT_MSG = "Create and implement the complete Task Manager REST API in the $ARCH_NAME architecture. Follow benchmark-$GUIDE_SLUG.md Step 4 exactly. Create ALL the Java files listed above with full implementation — do not leave any file empty. Requirements: all 5 endpoints (GET /tasks 200, POST /tasks 201, GET /tasks/{id} 200/404, PUT /tasks/{id} 200/400/404, DELETE /tasks/{id} 204/404), validations (missing/empty title=400 body:{error:title is required}, title>200chars=400, description>1000chars=400, unknown id=404 body:{error:Task not found}), UUID for IDs, ConcurrentHashMap for storage, Spring Boot 3.2 annotations."
 
-Log "[3/6] Aider implementando $ARCH_NAME..." "Cyan"
+Log "[3/6] Aider criando e implementando $ARCH_NAME..." "Cyan"
 
 while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
     if ($attempt -eq 0) {
@@ -412,7 +400,14 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
 
     $totalTurns++
 
-    Log "  Compilando..." "DarkGray"
+    $javaCount = (Get-ChildItem -Path $IMPL_DIR -Filter "*.java" -Recurse -ErrorAction SilentlyContinue).Count
+    if ($javaCount -eq 0 -and $attempt -eq 0) {
+        Log "  AVISO: nenhum arquivo Java foi criado. O modelo nao gerou codigo." "Red"
+        Log "  Verifique se o modelo Ollama esta respondendo corretamente." "Yellow"
+        break
+    }
+
+    Log "  Compilando ($javaCount arquivos Java)..." "DarkGray"
     $lastBuildOutput = & ".\mvnw.cmd" compile 2>&1
 
     if ($lastBuildOutput -match "BUILD SUCCESS") {
@@ -445,12 +440,12 @@ if ($buildSuccess) {
 # PASSO 5 - E2E
 # =====================================================================
 
-Log "[5/6] Testes E2E..." "Cyan"
+Log "[5/6] Testes E2E (12 cenarios)..." "Cyan"
 $e2eResult = @{ Passed = 0; Failed = 12; Failures = @() }
 $appProcess = $null
 
 if ($buildSuccess) {
-    Log "  Subindo aplicacao Spring Boot..." "DarkGray"
+    Log "  Subindo Spring Boot..." "DarkGray"
     $appProcess = Start-Process -NoNewWindow -PassThru -FilePath ".\mvnw.cmd" -ArgumentList "spring-boot:run"
     $appReady = Wait-ForApp
 
@@ -469,7 +464,7 @@ if ($buildSuccess) {
 }
 
 # =====================================================================
-# PASSO 6 - Metricas finais + atualizar JSON
+# PASSO 6 - Metricas finais + JSON
 # =====================================================================
 
 Log "[6/6] Coletando metricas e atualizando JSON..." "Cyan"
@@ -480,19 +475,15 @@ $loc      = Get-LOC -ImplDir $IMPL_DIR
 Set-Location $BASE_DIR
 python tools/ollama_collector.py --collect --model $MODEL_NAME --arch $ARCH_NAME --impl-dir $IMPL_DIR
 
-# Encontrar o JSON gerado e atualizar com todos os resultados
-$jsonFile = Get-ChildItem "experiments\exp-03-ollama-local-models\results" |
-            Where-Object { $_.Name -like "ollama_*${MODEL_DIR}*_${ARCH_NAME}_*.json" -or $_.Name -like "ollama_*$($MODEL_NAME.Replace(':','-').Replace('/','-'))_${ARCH_NAME}_*.json" } |
+$jsonFile = Get-ChildItem "experiments\exp-03-ollama-local-models\results" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like "ollama_*${ARCH_NAME}*.json" } |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if ($jsonFile) {
     Update-ResultJson -JsonPath $jsonFile.FullName `
-                      -E2E $e2eResult `
-                      -Coverage $coverage `
-                      -LOC $loc `
-                      -CompileErrors $compileErrors `
-                      -TestSuccess $testSuccess `
-                      -TotalTurns $totalTurns
+                      -E2E $e2eResult -Coverage $coverage -LOC $loc `
+                      -CompileErrors $compileErrors -TestSuccess $testSuccess -TotalTurns $totalTurns
+    Log "  JSON: $($jsonFile.Name)" "DarkGray"
 }
 
 # =====================================================================
@@ -503,7 +494,7 @@ $javaCount = (Get-ChildItem -Path $IMPL_DIR -Filter "*.java" -Recurse -ErrorActi
 
 Write-Host ""
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " RESULTADO FINAL: $MODEL_NAME / $ARCH_NAME" -ForegroundColor Cyan
+Write-Host " RESULTADO: $MODEL_NAME / $ARCH_NAME" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host " Arquivos Java  : $javaCount" -ForegroundColor White
 Write-Host " Build          : $(if ($buildSuccess) { "SUCCESS" } else { "FAILURE" })" -ForegroundColor $(if ($buildSuccess) { "Green" } else { "Red" })
@@ -512,10 +503,7 @@ Write-Host " E2E            : $($e2eResult.Passed)/12" -ForegroundColor $(if ($e
 Write-Host " LOC (main)     : $($loc.Main)" -ForegroundColor White
 Write-Host " Cobertura      : $($coverage.Line)% linha / $($coverage.Branch)% branch" -ForegroundColor White
 Write-Host " Tentativas     : $totalTurns (erros compile: $compileErrors)" -ForegroundColor White
-if ($jsonFile) {
-    Write-Host " JSON           : $($jsonFile.Name)" -ForegroundColor DarkGray
-}
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Preencha manualmente no JSON: tokens_per_sec, arch_conformance" -ForegroundColor Yellow
+Write-Host "Preencha no JSON: tokens_per_sec, arch_conformance" -ForegroundColor Yellow
 Write-Host ""
