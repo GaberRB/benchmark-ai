@@ -5,16 +5,14 @@ build/
 .kotlin/
 
 # ── Source code (gerado pelos agentes durante o benchmark) ───────
-java-implementation/src/
-kotlin-implementation/src/
-java-implementation-mode2/src/
-kotlin-implementation-mode2/src/
-arch-benchmark/*/src/
+experiments/exp-01-java-vs-kotlin/*/src/
+experiments/exp-02-arch-patterns/*/src/
+experiments/exp-03-ollama-local-models/implementations/*/*/src/
 
 # ── Resultados do benchmark (cada um gera os seus) ───────────────
-metrics/reports/*.json
-metrics/reports/*.html
-metrics/reports/*.md
+experiments/*/results/*.json
+experiments/*/results/*.html
+experiments/*/results/*.md
 
 # ── Logs de execução ─────────────────────────────────────────────
 *.log
