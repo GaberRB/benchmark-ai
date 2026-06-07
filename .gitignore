@@ -7,7 +7,6 @@ build/
 # ── Source code (gerado pelos agentes durante o benchmark) ───────
 experiments/exp-01-java-vs-kotlin/*/src/
 experiments/exp-02-arch-patterns/*/src/
-experiments/exp-03-ollama-local-models/implementations/*/*/src/
 
 # ── Resultados do benchmark (cada um gera os seus) ───────────────
 experiments/*/results/*.json
@@ -18,10 +17,19 @@ experiments/*/results/*.md
 *.log
 bootrun*.log
 
+# ── Variáveis de ambiente e chaves de API ────────────────────────
+.env
+.env.*
+*.env
+
 # ── Arquivos temporários e locais ────────────────────────────────
 *.zip
 *.mp4
 -w
+
+# ── Sessões e relatórios gerados localmente ───────────────────────
+metrics/
+tools/*.json
 
 # ── Claude Code (configurações locais, sessões e telemetria) ─────
 .claude/settings.local.json
