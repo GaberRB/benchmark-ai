@@ -47,3 +47,4 @@ bootrun*.log
 .classpath
 .project
 .settings/
+.aider*

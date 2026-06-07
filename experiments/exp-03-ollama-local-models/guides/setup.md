@@ -19,9 +19,17 @@ Se o Ollama não estiver instalado: https://ollama.com/download
 
 ## 2. Instalar Aider
 
+> **Atenção**: `pip install aider-chat` falha no Python 3.14+ (sem wheels para scipy).
+> Use `uv` com Python 3.12:
+
 ```powershell
-pip install aider-chat
-aider --version    # Verificar instalação
+# Instalar uv (caso não esteja presente)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Instalar Aider via uv com Python 3.12
+uv tool install aider-chat --python 3.12
+
+aider --version    # Esperado: aider 0.86.x
 ```
 
 ---
@@ -53,27 +61,28 @@ ollama list
 
 ## 4. Criar o pom.xml Base em Cada Pasta de Implementação
 
-Cada combinação modelo/arquitetura precisa de um projeto Maven. Copie o `pom.xml` da arquitetura equivalente do Exp-02:
+> **Já feito**: `pom.xml` e `mvnw.cmd` foram copiados para todas as 28 pastas durante o setup inicial.
+> Caso precise recriar, use o script abaixo:
 
 ```powershell
-# Exemplo: copiar pom.xml do MVC para deepseek-coder/mvc
-$base = "C:\Users\grios\OneDrive\Desktop\benchmark"
-Copy-Item "$base\experiments\exp-02-arch-patterns\mvc\pom.xml" `
-          "$base\experiments\exp-03-ollama-local-models\implementations\deepseek-coder\mvc\pom.xml"
-```
+$base   = "C:\Users\grios\OneDrive\Desktop\benchmark"
+$models = @("deepseek-coder", "qwen2.5-coder", "codellama", "llama3.1")
+$archs  = @("mvc", "vertical-slice", "clean-architecture", "hexagonal", "ddd", "event-driven", "cqrs")
 
-> Repita para cada par (modelo, arquitetura) que for executar.
+foreach ($model in $models) {
+    foreach ($arch in $archs) {
+        $dest = "$base\experiments\exp-03-ollama-local-models\implementations\$model\$arch"
+        Copy-Item "$base\experiments\exp-02-arch-patterns\mvc\pom.xml"  "$dest\pom.xml"  -Force
+        Copy-Item "$base\experiments\exp-02-arch-patterns\mvc\mvnw.cmd" "$dest\mvnw.cmd" -Force
+    }
+}
+```
 
 ---
 
-## 5. Instalar o Maven Wrapper
+## 5. Maven Wrapper (mvnw.cmd)
 
-Se o `pom.xml` não incluir o Maven Wrapper (`mvnw.cmd`), copie do Exp-02:
-
-```powershell
-Copy-Item "$base\experiments\exp-02-arch-patterns\mvc\mvnw.cmd" `
-          "$base\experiments\exp-03-ollama-local-models\implementations\deepseek-coder\mvc\mvnw.cmd"
-```
+Já copiado junto com o `pom.xml` no passo anterior — nada a fazer.
 
 ---
 
@@ -106,12 +115,19 @@ aider --model ollama/deepseek-coder-v2:16b --no-auto-commits --message "Olá, vo
 
 ---
 
-## 8. (Opcional) Instalar psutil para Coleta de RAM
+## 8. Instalar psutil para Coleta de RAM
 
 O `tools/ollama_collector.py` usa `psutil` para medir uso de RAM durante a sessão:
 
 ```powershell
 pip install psutil
+python -c "import psutil; print('psutil', psutil.__version__, '| RAM:', round(psutil.virtual_memory().total/(1024**3),1), 'GB')"
+```
+
+Verificar hardware detectado:
+```powershell
+cd "C:\Users\grios\OneDrive\Desktop\benchmark"
+python tools/ollama_collector.py --hardware
 ```
 
 ---
