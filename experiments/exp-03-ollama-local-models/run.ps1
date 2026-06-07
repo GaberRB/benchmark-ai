@@ -1,4 +1,4 @@
-﻿# run.ps1 - Configura o ambiente e roda o Aider em auto mode
+﻿# run.ps1 - Benchmark Ollama + Aider (auto mode com stub files)
 # Uso: .\run.ps1                    (menu interativo)
 #      .\run.ps1 -Model 2 -Arch 3   (parametros diretos)
 
@@ -9,6 +9,8 @@ param(
 )
 
 $BASE_DIR = "C:\Users\grios\OneDrive\Desktop\benchmark"
+$PKG_BASE = "src\main\java\com\benchmark\taskmanager"
+$PKG_DECL = "com.benchmark.taskmanager"
 
 $MODELS = [ordered]@{
     "1" = @{ Name = "deepseek-coder-v2:16b"; Dir = "deepseek-coder"; Label = "Deepseek Coder V2 16B  (~9 GB)" }
@@ -25,6 +27,164 @@ $ARCHS = [ordered]@{
     "5" = @{ Name = "ddd";                Dir = "ddd" }
     "6" = @{ Name = "event-driven";       Dir = "event-driven" }
     "7" = @{ Name = "cqrs";               Dir = "cqrs" }
+}
+
+# --- Funcao: criar stub files por arquitetura ---
+function New-Stubs {
+    param([string]$ImplDir, [string]$ArchName)
+
+    $pkg = $PKG_BASE
+    $root = Join-Path $ImplDir $pkg
+
+    $files = switch ($ArchName) {
+        "mvc" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\model\Task.java",
+            "$pkg\dto\CreateTaskRequest.java",
+            "$pkg\dto\UpdateTaskRequest.java",
+            "$pkg\repository\TaskRepository.java",
+            "$pkg\repository\InMemoryTaskRepository.java",
+            "$pkg\service\TaskService.java",
+            "$pkg\controller\TaskController.java",
+            "$pkg\exception\TaskNotFoundException.java",
+            "$pkg\exception\GlobalExceptionHandler.java"
+        )}
+        "vertical-slice" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\tasks\Task.java",
+            "$pkg\tasks\TaskRepository.java",
+            "$pkg\tasks\InMemoryTaskRepository.java",
+            "$pkg\tasks\CreateTask\CreateTaskRequest.java",
+            "$pkg\tasks\CreateTask\CreateTaskHandler.java",
+            "$pkg\tasks\GetTask\GetTaskHandler.java",
+            "$pkg\tasks\ListTasks\ListTasksHandler.java",
+            "$pkg\tasks\UpdateTask\UpdateTaskRequest.java",
+            "$pkg\tasks\UpdateTask\UpdateTaskHandler.java",
+            "$pkg\tasks\DeleteTask\DeleteTaskHandler.java",
+            "$pkg\tasks\TaskController.java",
+            "$pkg\tasks\GlobalExceptionHandler.java",
+            "$pkg\tasks\TaskNotFoundException.java"
+        )}
+        "clean-architecture" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\domain\Task.java",
+            "$pkg\domain\TaskRepository.java",
+            "$pkg\application\TaskService.java",
+            "$pkg\application\CreateTaskCommand.java",
+            "$pkg\application\UpdateTaskCommand.java",
+            "$pkg\infrastructure\InMemoryTaskRepository.java",
+            "$pkg\interfaces\TaskController.java",
+            "$pkg\interfaces\CreateTaskRequest.java",
+            "$pkg\interfaces\UpdateTaskRequest.java",
+            "$pkg\interfaces\TaskNotFoundException.java",
+            "$pkg\interfaces\GlobalExceptionHandler.java"
+        )}
+        "hexagonal" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\domain\Task.java",
+            "$pkg\application\ports\in\CreateTaskUseCase.java",
+            "$pkg\application\ports\in\GetTaskUseCase.java",
+            "$pkg\application\ports\in\ListTasksUseCase.java",
+            "$pkg\application\ports\in\UpdateTaskUseCase.java",
+            "$pkg\application\ports\in\DeleteTaskUseCase.java",
+            "$pkg\application\ports\out\TaskRepository.java",
+            "$pkg\application\service\TaskService.java",
+            "$pkg\adapters\in\web\TaskController.java",
+            "$pkg\adapters\in\web\CreateTaskRequest.java",
+            "$pkg\adapters\in\web\UpdateTaskRequest.java",
+            "$pkg\adapters\in\web\GlobalExceptionHandler.java",
+            "$pkg\adapters\out\persistence\InMemoryTaskRepository.java",
+            "$pkg\exception\TaskNotFoundException.java"
+        )}
+        "ddd" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\domain\model\Task.java",
+            "$pkg\domain\model\TaskId.java",
+            "$pkg\domain\model\Title.java",
+            "$pkg\domain\model\Description.java",
+            "$pkg\domain\repository\TaskRepository.java",
+            "$pkg\domain\exception\TaskNotFoundException.java",
+            "$pkg\domain\exception\InvalidValueException.java",
+            "$pkg\application\TaskApplicationService.java",
+            "$pkg\application\dto\CreateTaskCommand.java",
+            "$pkg\application\dto\UpdateTaskCommand.java",
+            "$pkg\application\dto\TaskDto.java",
+            "$pkg\infrastructure\persistence\InMemoryTaskRepository.java",
+            "$pkg\interfaces\web\TaskController.java",
+            "$pkg\interfaces\web\CreateTaskRequest.java",
+            "$pkg\interfaces\web\UpdateTaskRequest.java",
+            "$pkg\interfaces\web\GlobalExceptionHandler.java"
+        )}
+        "event-driven" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\events\DomainEvent.java",
+            "$pkg\events\TaskCreatedEvent.java",
+            "$pkg\events\TaskUpdatedEvent.java",
+            "$pkg\events\TaskDeletedEvent.java",
+            "$pkg\events\EventHandler.java",
+            "$pkg\events\EventBus.java",
+            "$pkg\events\InMemoryEventBus.java",
+            "$pkg\handlers\TaskCreatedHandler.java",
+            "$pkg\handlers\TaskUpdatedHandler.java",
+            "$pkg\handlers\TaskDeletedHandler.java",
+            "$pkg\model\Task.java",
+            "$pkg\model\TaskStatus.java",
+            "$pkg\repository\TaskRepository.java",
+            "$pkg\repository\InMemoryTaskRepository.java",
+            "$pkg\service\TaskService.java",
+            "$pkg\api\TaskController.java",
+            "$pkg\api\CreateTaskRequest.java",
+            "$pkg\api\UpdateTaskRequest.java",
+            "$pkg\api\TaskResponse.java",
+            "$pkg\api\TaskNotFoundException.java",
+            "$pkg\api\GlobalExceptionHandler.java"
+        )}
+        "cqrs" { @(
+            "$pkg\TaskManagerApplication.java",
+            "$pkg\commands\create\CreateTaskCommand.java",
+            "$pkg\commands\create\CreateTaskHandler.java",
+            "$pkg\commands\update\UpdateTaskCommand.java",
+            "$pkg\commands\update\UpdateTaskHandler.java",
+            "$pkg\commands\delete\DeleteTaskCommand.java",
+            "$pkg\commands\delete\DeleteTaskHandler.java",
+            "$pkg\queries\get\GetTaskQuery.java",
+            "$pkg\queries\get\GetTaskHandler.java",
+            "$pkg\queries\list\ListTasksQuery.java",
+            "$pkg\queries\list\ListTasksHandler.java",
+            "$pkg\model\Task.java",
+            "$pkg\model\TaskRepository.java",
+            "$pkg\model\InMemoryTaskRepository.java",
+            "$pkg\api\TaskController.java",
+            "$pkg\api\CreateTaskRequest.java",
+            "$pkg\api\UpdateTaskRequest.java",
+            "$pkg\api\GlobalExceptionHandler.java",
+            "$pkg\api\TaskNotFoundException.java"
+        )}
+        default { @() }
+    }
+
+    $created = @()
+    foreach ($rel in $files) {
+        $full = Join-Path $ImplDir $rel
+        $dir  = Split-Path $full -Parent
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        if (-not (Test-Path $full)) {
+            "" | Out-File -FilePath $full -Encoding utf8
+            $created += $full
+        }
+    }
+
+    # Tambem criar src/test/java/com/benchmark/taskmanager/
+    $testRoot = Join-Path $ImplDir "src\test\java\com\benchmark\taskmanager"
+    New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+    $testFile = Join-Path $testRoot "TaskManagerApplicationTests.java"
+    if (-not (Test-Path $testFile)) {
+        "" | Out-File -FilePath $testFile -Encoding utf8
+        $created += $testFile
+    }
+
+    Write-Host "  $($created.Count) stub files criados." -ForegroundColor DarkGray
+    return $files | ForEach-Object { Join-Path $ImplDir $_ }
 }
 
 # --- Selecionar modelo ---
@@ -87,20 +247,28 @@ Write-Host "[1/4] Iniciando coletor de metricas..." -ForegroundColor Cyan
 Set-Location $BASE_DIR
 python tools/ollama_collector.py --start --model $MODEL_NAME --arch $ARCH_NAME
 
-# --- Loop: Aider auto mode + compile + corrigir erros ---
+# --- Criar stub files ---
+
+Write-Host ""
+Write-Host "[2/4] Criando estrutura de arquivos..." -ForegroundColor Cyan
+$stubFiles = New-Stubs -ImplDir $IMPL_DIR -ArchName $ARCH_NAME
+
+# Montar argumentos --file para o Aider
+$fileArgs = $stubFiles | Where-Object { Test-Path $_ } | ForEach-Object { @("--file", $_) }
+
+# --- Loop: Aider implementa + compile + corrige ---
 
 Set-Location $IMPL_DIR
 
-$attempt      = 0
-$buildSuccess = $false
-$totalTurns   = 0
+$attempt       = 0
+$buildSuccess  = $false
+$totalTurns    = 0
 $compileErrors = 0
 
-# Mensagem inicial clara e direta para criacao de arquivos
-$INIT_MSG = "Create a complete Java 21 Spring Boot 3.2 Task Manager REST API implementing the $ARCH_NAME architecture as described in benchmark-$GUIDE_SLUG.md Step 4. CREATE all the Java source files now. Use the exact package structure from the guide. Implement all 5 endpoints: GET /tasks (200), POST /tasks (201), GET /tasks/{id} (200/404), PUT /tasks/{id} (200/400/404), DELETE /tasks/{id} (204/404). Validations: empty/missing title returns 400, title over 200 chars returns 400, description over 1000 chars returns 400, unknown id returns 404 with body {`"error`":`"Task not found`"}."
+$INIT_MSG = "Implement the complete Task Manager REST API in the $ARCH_NAME architecture. All the source files are already created and listed above — implement each one fully. Follow benchmark-$GUIDE_SLUG.md Step 4 exactly: mandatory package structure, all 5 endpoints, all validations. Do not leave any file empty or with placeholder comments."
 
 Write-Host ""
-Write-Host "[2/4] Aider implementando $ARCH_NAME (auto mode)..." -ForegroundColor Cyan
+Write-Host "[3/4] Aider implementando $ARCH_NAME (auto mode)..." -ForegroundColor Cyan
 
 while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
 
@@ -108,29 +276,30 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
         $msg = $INIT_MSG
     } else {
         $errorLines = ($lastBuildOutput | Where-Object { $_ -match "\[ERROR\]" } | Select-Object -First 20) -join "`n"
-        $msg = "The code has compilation errors. Fix ALL of them so the project compiles successfully:`n`n$errorLines"
-        Write-Host "  Tentativa $($attempt+1): corrigindo erros de compilacao..." -ForegroundColor Yellow
+        $msg = "Fix ALL compilation errors so the project builds successfully:`n`n$errorLines"
+        Write-Host "  Tentativa $($attempt+1): corrigindo erros..." -ForegroundColor Yellow
         $compileErrors++
     }
 
-    aider --model "ollama/$MODEL_NAME" `
-          --read $TASK_DEF `
-          --read $GUIDE `
-          --message $msg `
-          --yes `
-          --no-auto-commits
+    & aider --model "ollama/$MODEL_NAME" `
+            --read $TASK_DEF `
+            --read $GUIDE `
+            @fileArgs `
+            --message $msg `
+            --yes `
+            --no-auto-commits
 
     $totalTurns++
 
-    # Verificar se algum arquivo foi criado
-    $javaFiles = Get-ChildItem -Path $IMPL_DIR -Filter "*.java" -Recurse -ErrorAction SilentlyContinue
-    if ($javaFiles.Count -eq 0 -and $attempt -eq 0) {
-        Write-Host "  AVISO: Nenhum arquivo Java criado. O modelo pode nao ter gerado codigo." -ForegroundColor Red
-        Write-Host "  Verifique o output do Aider acima e tente rodar novamente." -ForegroundColor Yellow
-        break
+    # Checar se os arquivos foram preenchidos (pelo menos o Application)
+    $appFile = Join-Path $IMPL_DIR "$PKG_BASE\TaskManagerApplication.java"
+    $appContent = if (Test-Path $appFile) { Get-Content $appFile -Raw } else { "" }
+    if ($appContent.Trim().Length -lt 50 -and $attempt -eq 0) {
+        Write-Host "  AVISO: arquivos ainda vazios apos primeira tentativa." -ForegroundColor Red
+        Write-Host "  O modelo pode nao estar gerando codigo. Verifique o output do Aider." -ForegroundColor Yellow
     }
 
-    Write-Host "  Compilando ($($javaFiles.Count) arquivos Java)..." -ForegroundColor DarkGray
+    Write-Host "  Compilando..." -ForegroundColor DarkGray
     $lastBuildOutput = & ".\mvnw.cmd" compile 2>&1
 
     if ($lastBuildOutput -match "BUILD SUCCESS") {
@@ -144,11 +313,9 @@ while ($attempt -lt $MaxRetries -and -not $buildSuccess) {
 
 # --- Testes unitarios ---
 
-Write-Host ""
-Write-Host "[3/4] Rodando testes..." -ForegroundColor Cyan
-
 $testSuccess = $false
 if ($buildSuccess) {
+    Write-Host "  Rodando testes..." -ForegroundColor DarkGray
     $testOutput = & ".\mvnw.cmd" test 2>&1
     if ($testOutput -match "BUILD SUCCESS") {
         $testSuccess = $true
@@ -175,8 +342,8 @@ Write-Host "=====================================================" -ForegroundCo
 Write-Host " RESULTADO: $MODEL_NAME / $ARCH_NAME" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host " Arquivos Java : $javaCount" -ForegroundColor White
-Write-Host " Build         : $(if ($buildSuccess) { 'SUCCESS' } else { 'FAILURE' })" -ForegroundColor $(if ($buildSuccess) { "Green" } else { "Red" })
-Write-Host " Testes        : $(if ($testSuccess)  { 'SUCCESS' } else { 'FAILURE' })" -ForegroundColor $(if ($testSuccess)  { "Green" } else { "Red" })
+Write-Host " Build         : $(if ($buildSuccess) { "SUCCESS" } else { "FAILURE" })" -ForegroundColor $(if ($buildSuccess) { "Green" } else { "Red" })
+Write-Host " Testes        : $(if ($testSuccess)  { "SUCCESS" } else { "FAILURE" })" -ForegroundColor $(if ($testSuccess)  { "Green" } else { "Red" })
 Write-Host " Tentativas    : $totalTurns (erros compile: $compileErrors)" -ForegroundColor White
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host ""
