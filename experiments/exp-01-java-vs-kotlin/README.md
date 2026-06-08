@@ -3,6 +3,8 @@
 > **Variável:** linguagem · **Constante:** arquitetura MVC, Claude Code `claude-sonnet-4-6`  
 > **Pergunta:** qual linguagem a IA implementa com menor custo, menos erros e mais qualidade?
 
+> 📊 **[Análise completa com métricas detalhadas, visualizações e interpretação dos resultados →](ANALISE.md)**
+
 ---
 
 ## Resultados
