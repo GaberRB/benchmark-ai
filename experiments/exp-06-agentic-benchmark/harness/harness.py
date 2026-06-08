@@ -159,6 +159,12 @@ class BenchmarkHarness:
                 e2e_attempts += 1
                 chk_e2e = m.eval_e2e(self.impl_dir)
                 p(f"  E2E       : {chk_e2e['passed']}/12  (tentativa E2E #{e2e_attempts})")
+                for r in chk_e2e.get("results", []):
+                    mark = "\033[32m✓\033[0m" if r["pass"] else "\033[31m✗\033[0m"
+                    line = f"    {mark} {r['id']} {r['desc']:30s} {r['got']:>3} (esperado {r['want']})"
+                    if not r["pass"] and r.get("body"):
+                        line += f"\n         body: {r['body']}"
+                    p(line)
 
                 all_ok = (
                     chk_tests.get("tests_pass", False)

@@ -155,14 +155,18 @@ def eval_e2e(impl_dir: Path) -> dict:
 
     passed = sum(1 for r in results if r["pass"])
     failed = sum(1 for r in results if not r["pass"])
-    failures = [f"E2E-{r['id']}: {r['desc']} expected={r['want']} got={r['got']}"
-                for r in results if not r["pass"]]
+    failures = [
+        f"E2E-{r['id']}: {r['desc']}  expected={r['want']}  got={r['got']}"
+        + (f"  body={r['body']}" if r.get("body") else "")
+        for r in results if not r["pass"]
+    ]
     return {
         "app_started": True,
         "passed": passed,
         "failed": failed,
         "all_passed": passed == 12,
         "failures": failures,
+        "results": results,   # lista completa para print detalhado no harness
     }
 
 
@@ -238,58 +242,66 @@ def _run_e2e_scenarios() -> list[dict]:
     results = []
     task_id = "unknown"
 
-    def chk(id: str, desc: str, got: int, want: int) -> dict:
-        return {"id": id, "desc": desc, "got": got, "want": want, "pass": got == want}
+    def chk(id: str, desc: str, got: int, want: int, body=None) -> dict:
+        body_str = ""
+        if body is not None:
+            try:
+                import json as _json
+                body_str = _json.dumps(body, ensure_ascii=False)[:300]
+            except Exception:
+                body_str = str(body)[:300]
+        return {"id": id, "desc": desc, "got": got, "want": want,
+                "pass": got == want, "body": body_str}
 
     # 01 — GET /tasks vazia
-    code, _ = _http("GET", f"{BASE_URL}/tasks")
-    results.append(chk("01", "GET /tasks", code, 200))
+    code, body = _http("GET", f"{BASE_URL}/tasks")
+    results.append(chk("01", "GET /tasks vazia", code, 200, body))
 
     # 02 — POST /tasks com título → 201
     code, body = _http("POST", f"{BASE_URL}/tasks", {"title": "Test Task", "description": "Desc"})
-    results.append(chk("02", "POST /tasks 201", code, 201))
+    results.append(chk("02", "POST /tasks 201", code, 201, body))
     if body and isinstance(body, dict):
         task_id = body.get("id", "unknown")
 
     # 03 — POST sem body → 400
-    code, _ = _http("POST", f"{BASE_URL}/tasks", {})
-    results.append(chk("03", "POST sem title 400", code, 400))
+    code, body = _http("POST", f"{BASE_URL}/tasks", {})
+    results.append(chk("03", "POST sem title 400", code, 400, body))
 
     # 04 — POST title vazio → 400
-    code, _ = _http("POST", f"{BASE_URL}/tasks", {"title": ""})
-    results.append(chk("04", "POST title='' 400", code, 400))
+    code, body = _http("POST", f"{BASE_URL}/tasks", {"title": ""})
+    results.append(chk("04", "POST title='' 400", code, 400, body))
 
     # 05 — GET /tasks lista (deve conter a tarefa criada)
-    code, _ = _http("GET", f"{BASE_URL}/tasks")
-    results.append(chk("05", "GET /tasks lista", code, 200))
+    code, body = _http("GET", f"{BASE_URL}/tasks")
+    results.append(chk("05", "GET /tasks lista", code, 200, body))
 
     # 06 — GET /tasks/{id} existente → 200
-    code, _ = _http("GET", f"{BASE_URL}/tasks/{task_id}")
-    results.append(chk("06", "GET /tasks/{id}", code, 200))
+    code, body = _http("GET", f"{BASE_URL}/tasks/{task_id}")
+    results.append(chk("06", "GET /tasks/{id} existente", code, 200, body))
 
     # 07 — GET /tasks/{id} inválido → 404
-    code, _ = _http("GET", f"{BASE_URL}/tasks/id-invalido-xyz")
-    results.append(chk("07", "GET invalido 404", code, 404))
+    code, body = _http("GET", f"{BASE_URL}/tasks/id-invalido-xyz")
+    results.append(chk("07", "GET invalido 404", code, 404, body))
 
     # 08 — PUT /tasks/{id} → 200
-    code, _ = _http("PUT", f"{BASE_URL}/tasks/{task_id}", {"title": "Updated", "completed": True})
-    results.append(chk("08", "PUT /tasks/{id}", code, 200))
+    code, body = _http("PUT", f"{BASE_URL}/tasks/{task_id}", {"title": "Updated", "completed": True})
+    results.append(chk("08", "PUT /tasks/{id} existente", code, 200, body))
 
     # 09 — PUT /tasks/{id} inválido → 404
-    code, _ = _http("PUT", f"{BASE_URL}/tasks/id-invalido-xyz", {"title": "X"})
-    results.append(chk("09", "PUT invalido 404", code, 404))
+    code, body = _http("PUT", f"{BASE_URL}/tasks/id-invalido-xyz", {"title": "X"})
+    results.append(chk("09", "PUT invalido 404", code, 404, body))
 
     # 10 — DELETE /tasks/{id} → 204
-    code, _ = _http("DELETE", f"{BASE_URL}/tasks/{task_id}")
-    results.append(chk("10", "DELETE /tasks/{id}", code, 204))
+    code, body = _http("DELETE", f"{BASE_URL}/tasks/{task_id}")
+    results.append(chk("10", "DELETE /tasks/{id} existente", code, 204, body))
 
     # 11 — DELETE inválido → 404
-    code, _ = _http("DELETE", f"{BASE_URL}/tasks/id-invalido-xyz")
-    results.append(chk("11", "DELETE invalido 404", code, 404))
+    code, body = _http("DELETE", f"{BASE_URL}/tasks/id-invalido-xyz")
+    results.append(chk("11", "DELETE invalido 404", code, 404, body))
 
     # 12 — GET após DELETE → 404
-    code, _ = _http("GET", f"{BASE_URL}/tasks/{task_id}")
-    results.append(chk("12", "GET apos DELETE 404", code, 404))
+    code, body = _http("GET", f"{BASE_URL}/tasks/{task_id}")
+    results.append(chk("12", "GET apos DELETE 404", code, 404, body))
 
     return results
 
