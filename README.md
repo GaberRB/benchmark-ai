@@ -7,6 +7,7 @@
 [![Exp-01](https://img.shields.io/badge/Exp--01%20Java%20vs%20Kotlin-Concluído%20✅-brightgreen?style=flat-square)](#experimento-01--java-vs-kotlin)
 [![Exp-02](https://img.shields.io/badge/Exp--02%20Arquiteturas-Concluído%20✅-brightgreen?style=flat-square)](#experimento-02--padrões-arquiteturais)
 [![Exp-06](https://img.shields.io/badge/Exp--06%20Agentic-Em%20andamento%20🔄-blue?style=flat-square)](#experimento-06--agentic-benchmark)
+[![Exp-07](https://img.shields.io/badge/Exp--07%20Aider-Em%20andamento%20🔄-blue?style=flat-square)](#experimento-07--aider-benchmark)
 
 </div>
 
@@ -24,6 +25,7 @@ O que evolui é **quem controla o loop**:
 |---|---|---|
 | Exp-01 / Exp-02 | Claude Code CLI | Humano dá o guia, agente executa |
 | Exp-06 | OpenRouter API + tool use | LLM decide tudo de forma autônoma |
+| Exp-07 | **Aider CLI** + OpenRouter | Aider executa autonomamente, LLM configurável |
 
 ---
 
@@ -31,9 +33,10 @@ O que evolui é **quem controla o loop**:
 
 | # | Nome | Variável testada | Ferramenta | Status | Detalhes |
 |---|------|-----------------|------------|--------|----------|
-| 01 | **Java vs Kotlin** | Linguagem | Claude Code · `claude-sonnet-4-6` | ✅ Concluído | [→ resultados](experiments/exp-01-java-vs-kotlin/README.md) |
+| 01 | **Java vs Kotlin** | Linguagem + build tool | Claude Code · `claude-sonnet-4-6` | ✅ Concluído | [→ resultados](experiments/exp-01-java-vs-kotlin/README.md) |
 | 02 | **Padrões Arquiteturais** | Arquitetura (7 padrões) | Claude Code · `claude-sonnet-4-6` | ✅ Concluído | [→ resultados](experiments/exp-02-arch-patterns/README.md) |
 | 06 | **Agentic Benchmark** | Modelo + autonomia | OpenRouter · 5 modelos × 7 arquiteturas | 🔄 Em andamento | [→ harness](experiments/exp-06-agentic-benchmark/README.md) |
+| 07 | **Aider Benchmark** | LLM × arquitetura via Aider CLI | Aider · 6 modelos OpenRouter × 7 arquiteturas | 🔄 Em andamento | [→ setup](experiments/exp-07-aider-benchmark/README.md) |
 
 ---
 
@@ -160,6 +163,55 @@ python main.py
 
 ---
 
+## Experimento 07 — Aider Benchmark 🔄
+
+### O que é diferente
+
+O exp-07 usa o **Aider CLI** como agente de codificação em vez do Claude Code ou de um harness Python customizado. O diferencial: qualquer LLM disponível no OpenRouter pode ser testado com o mesmo guia e a mesma tarefa.
+
+| | exp-02 | exp-06 | exp-07 |
+|---|---|---|---|
+| Agente | Claude Code CLI | Harness Python (tool use) | **Aider CLI** |
+| LLM | claude-sonnet-4-6 (fixo) | Configurável (OpenRouter) | **Configurável (OpenRouter)** |
+| Modo | Humano executa guia | Totalmente autônomo | **Autônomo** (`--yes-always`) |
+| Build loop | Manual | Harness verifica | **`--auto-test` do Aider** |
+
+### Como funciona
+
+```
+aider --model openrouter/<model>
+      --test-cmd "mvn compile && mvn test"
+      --auto-test        ← após cada diff, roda o test-cmd e devolve o resultado à LLM
+      --yes-always       ← aceita todos os diffs sem confirmação
+      --read benchmark-aider-<arch>.md
+      --message "Implement the Task Manager REST API..."
+```
+
+A LLM gera diffs que o Aider aplica diretamente nos arquivos. Se `mvn compile && mvn test` falhar, o output vai de volta para a LLM corrigir — loop totalmente autônomo, sem ferramentas customizadas.
+
+### Modelos testados
+
+| Modelo | OpenRouter ID | In ($/M) | Out ($/M) |
+|--------|--------------|---------|---------|
+| Claude Sonnet 4.5 | `openrouter/anthropic/claude-sonnet-4.5` | $3,00 | $15,00 |
+| Claude Sonnet 4.6 | `openrouter/anthropic/claude-sonnet-4.6` | $3,00 | $15,00 |
+| DeepSeek V3 | `openrouter/deepseek/deepseek-chat` | $0,14 | $0,28 |
+| DeepSeek V3.2 | `openrouter/deepseek/deepseek-v3.2` | $0,14 | $0,28 |
+| Gemini 2.5 Flash | `openrouter/google/gemini-2.5-flash` | $0,075 | $0,30 |
+| Devstral 25/12 | `openrouter/mistralai/devstral-2512` | ~$0,10 | ~$0,30 |
+
+### Como rodar
+
+```powershell
+cd experiments/exp-07-aider-benchmark
+pip install -r requirements.txt
+python main.py
+```
+
+[→ Documentação completa e setup](experiments/exp-07-aider-benchmark/README.md)
+
+---
+
 ## Estrutura do Repositório
 
 ```
@@ -180,12 +232,21 @@ benchmark/
 │   │   ├── guides/                     # Guias de execução (benchmark-arch-*.md)
 │   │   └── results/
 │   │
-│   └── exp-06-agentic-benchmark/       # Experimento 6: LLM autônomo com tool use
-│       ├── README.md                   # Documentação do harness
-│       ├── main.py                     # TUI interativo (seleção de modelos + execução)
-│       ├── benchmark_config.py         # Config do projeto (modelos, arquiteturas, regras)
-│       ├── harness/                    # Loop agentico, tools, métricas
-│       ├── guides/                     # Um .md por arquitetura (prompt do experimento)
+│   ├── exp-06-agentic-benchmark/       # Experimento 6: LLM autônomo com tool use
+│   │   ├── README.md                   # Documentação do harness
+│   │   ├── main.py                     # TUI interativo (seleção de modelos + execução)
+│   │   ├── benchmark_config.py         # Config do projeto (modelos, arquiteturas, regras)
+│   │   ├── harness/                    # Loop agentico, tools, métricas
+│   │   ├── guides/                     # Um .md por arquitetura (prompt do experimento)
+│   │   ├── implementations/            # Código gerado — modelo/arquitetura/src
+│   │   └── results/                    # JSONs de resultado por run
+│   │
+│   └── exp-07-aider-benchmark/         # Experimento 7: Aider CLI × LLM configurável
+│       ├── README.md                   # Documentação do exp-07
+│       ├── main.py                     # TUI + lança Aider + verificação pós-sessão
+│       ├── benchmark_config.py         # 6 modelos OpenRouter confirmados no Aider
+│       ├── guides/                     # Um .md por arquitetura + setup.md
+│       ├── tools/collector.py          # Verificação: build + tests + 12 E2E
 │       ├── implementations/            # Código gerado — modelo/arquitetura/src
 │       └── results/                    # JSONs de resultado por run
 │
