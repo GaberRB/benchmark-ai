@@ -25,6 +25,7 @@ class BenchmarkConfig:
     max_build_failures: int = 10       # max de mvn compile falhando
     max_test_failures: int = 10        # max de mvn test falhando
     max_e2e_failures: int = 10         # max de verificações E2E falhando consecutivamente
+    stuck_threshold: int = 3           # falhas consecutivas em qualquer etapa → gera .md e encerra
 
     # ===== Tech Stack =====
     tech_stack: str = "Java 21, Spring Boot 3.2"

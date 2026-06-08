@@ -339,6 +339,11 @@ def run_benchmark_mode() -> None:
         default=config.max_e2e_failures,
         min_val=1,
     )
+    stuck = ask_int(
+        "Stuck threshold (falhas consec. → gera .md)   ",
+        default=config.stuck_threshold,
+        min_val=1,
+    )
     console.print()
 
     plan = build_plan(selected_models, arch_idxs)
@@ -351,6 +356,7 @@ def run_benchmark_mode() -> None:
     config.max_build_failures = max_build
     config.max_test_failures  = max_test
     config.max_e2e_failures   = max_e2e
+    config.stuck_threshold    = stuck
 
     from harness.harness import BenchmarkHarness
 
@@ -366,7 +372,8 @@ def run_benchmark_mode() -> None:
             f"[cyan]{model.get('label', model['name'])}[/cyan]  ×  [green]{arch}[/green]\n"
             f"[dim]build max={config.max_build_failures}  |  "
             f"test max={config.max_test_failures}  |  "
-            f"e2e max={config.max_e2e_failures}  |  execução autônoma[/dim]",
+            f"e2e max={config.max_e2e_failures}  |  "
+            f"stuck={config.stuck_threshold}  |  execução autônoma[/dim]",
             style="bold",
             padding=(0, 2),
         ))

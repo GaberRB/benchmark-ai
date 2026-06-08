@@ -14,6 +14,39 @@ from pathlib import Path
 import requests
 
 
+# Mapeamento de cada cenário E2E ao trecho relevante da spec (task-definition.md).
+# Injetado no feedback ao LLM quando o cenário falha — dá contexto semântico além do status code.
+E2E_SPEC = {
+    "01": 'GET /tasks → Response 200. "Lista vazia [] quando não há tarefas (nunca retornar null)"',
+    "02": 'POST /tasks → Response 201 (Created): { "id": "uuid-gerado", "title": "...", "completed": false, "createdAt": "...", "updatedAt": "..." }',
+    "03": 'POST /tasks validação → "title é obrigatório; retornar 400 se ausente ou vazio" → Response 400: { "error": "title is required" }',
+    "04": 'POST /tasks validação → "title é obrigatório; retornar 400 se ausente ou vazio" → Response 400: { "error": "title is required" }',
+    "05": "GET /tasks → Response 200: lista com todas as tarefas",
+    "06": "GET /tasks/{id} → Response 200: objeto da tarefa (ID existente no servidor)",
+    "07": (
+        'GET /tasks/{id} → Response 404: { "error": "Task not found" }. '
+        'IMPORTANTE: IDs são UUIDs v4 gerados pelo servidor. '
+        'Uma string como "id-invalido-xyz" não é um UUID válido e portanto NUNCA pode corresponder '
+        'a uma tarefa existente — deve retornar 404, não 400. '
+        'Se o seu @PathVariable é do tipo UUID, Spring lançará uma exceção de conversão que retorna 400 por padrão. '
+        'Solução: use @PathVariable String id e tente UUID.fromString(id) em try/catch — '
+        'se lançar IllegalArgumentException, lance TaskNotFoundException (404).'
+    ),
+    "08": 'PUT /tasks/{id} → Response 200: objeto da tarefa atualizado. "Substituição parcial — só campos enviados são alterados". updatedAt deve ser atualizado.',
+    "09": (
+        'PUT /tasks/{id} → Response 404: { "error": "Task not found" }. '
+        'Mesma regra do E2E-07: string não-UUID deve retornar 404, não 400. '
+        'Use @PathVariable String id com UUID.fromString() em try/catch.'
+    ),
+    "10": "DELETE /tasks/{id} → Response 204 (No Content): sem body",
+    "11": (
+        'DELETE /tasks/{id} → Response 404: { "error": "Task not found" }. '
+        'Mesma regra do E2E-07: string não-UUID deve retornar 404, não 400. '
+        'Use @PathVariable String id com UUID.fromString() em try/catch.'
+    ),
+    "12": 'GET /tasks/{id} após DELETE → Response 404: { "error": "Task not found" }. Tarefa deletada não deve mais existir.',
+}
+
 BASE_URL = "http://localhost:8080"
 APP_PORT = 8080
 APP_STARTUP_TIMEOUT = 90  # segundos
@@ -155,11 +188,15 @@ def eval_e2e(impl_dir: Path) -> dict:
 
     passed = sum(1 for r in results if r["pass"])
     failed = sum(1 for r in results if not r["pass"])
-    failures = [
-        f"E2E-{r['id']}: {r['desc']}  expected={r['want']}  got={r['got']}"
-        + (f"  body={r['body']}" if r.get("body") else "")
-        for r in results if not r["pass"]
-    ]
+    failures = []
+    for r in results:
+        if not r["pass"]:
+            line = f"E2E-{r['id']}: {r['desc']}  expected={r['want']}  got={r['got']}"
+            if r.get("body"):
+                line += f"\n  response body: {r['body']}"
+            if r.get("spec"):
+                line += f"\n  spec rule: {r['spec']}"
+            failures.append(line)
     return {
         "app_started": True,
         "passed": passed,
@@ -251,7 +288,8 @@ def _run_e2e_scenarios() -> list[dict]:
             except Exception:
                 body_str = str(body)[:300]
         return {"id": id, "desc": desc, "got": got, "want": want,
-                "pass": got == want, "body": body_str}
+                "pass": got == want, "body": body_str,
+                "spec": E2E_SPEC.get(id, "")}
 
     # 01 — GET /tasks vazia
     code, body = _http("GET", f"{BASE_URL}/tasks")

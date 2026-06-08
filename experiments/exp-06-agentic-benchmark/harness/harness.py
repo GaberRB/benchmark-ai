@@ -2,6 +2,7 @@
 
 import json
 import os
+import textwrap
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -196,6 +197,15 @@ class BenchmarkHarness:
                     )
                 if not chk_e2e.get("all_passed", False):
                     e2e_fail_streak += 1
+                    if e2e_fail_streak == self.cfg.stuck_threshold:
+                        fails_text = "\n".join(chk_e2e.get("failures", []))
+                        ctx = (
+                            f"E2E failures ({chk_e2e['passed']}/12 passing):\n{fails_text}\n\n"
+                            f"Last build error:\n```\n{self.executor.last_build_failure_output or 'N/A'}\n```"
+                        )
+                        self._trigger_stuck(messages, "e2e", ctx, p)
+                        convergence_reason = "stuck"
+                        break
                     if e2e_fail_streak >= self.cfg.max_e2e_failures:
                         p(f"\n[AVISO] Limite de {self.cfg.max_e2e_failures} falhas consecutivas de E2E atingido.")
                         convergence_reason = "max_e2e_failures"
@@ -255,7 +265,19 @@ class BenchmarkHarness:
                     "content": json.dumps(result, ensure_ascii=False),
                 })
 
-            # Verificar limites de falha por fase
+            # Verificar stuck (falhas consecutivas antes do limite máximo)
+            if self.executor.build_failures == self.cfg.stuck_threshold:
+                ctx = f"Last build error:\n```\n{self.executor.last_build_failure_output or 'N/A'}\n```"
+                self._trigger_stuck(messages, "build", ctx, p)
+                convergence_reason = "stuck"
+                break
+            if self.executor.test_failures == self.cfg.stuck_threshold:
+                ctx = f"Last test error:\n```\n{self.executor.last_test_failure_output or 'N/A'}\n```"
+                self._trigger_stuck(messages, "test", ctx, p)
+                convergence_reason = "stuck"
+                break
+
+            # Verificar limites máximos de falha por fase
             if self.executor.build_failures >= self.cfg.max_build_failures:
                 p(f"\n[AVISO] Limite de {self.cfg.max_build_failures} falhas de build atingido.")
                 convergence_reason = "max_build_failures"
@@ -473,6 +495,81 @@ Your job is compile + unit tests only. Use only: `mvn compile`, `mvn test`, `mvn
                 shutil.rmtree(str(target))
             except Exception:
                 pass
+
+    def _trigger_stuck(self, messages: list, stage: str, context: str, p) -> str:
+        """Pede ao LLM uma análise detalhada do problema, salva como .md e retorna o texto."""
+        p(f"\n\033[33m[STUCK] {stage} falhou {self.cfg.stuck_threshold}x consecutivas. "
+          f"Pedindo análise ao LLM...\033[0m")
+
+        prompt = (
+            f"You have failed the **{stage}** stage {self.cfg.stuck_threshold} consecutive times "
+            f"and the harness is stopping this run.\n\n"
+            f"Before stopping, describe the problem in detail so a human or another model can fix it later.\n\n"
+            f"Write a structured analysis with these sections:\n"
+            f"## Problem\n"
+            f"What is failing and what error/behavior you observe.\n\n"
+            f"## What I tried\n"
+            f"List every approach you attempted and why each failed.\n\n"
+            f"## Root cause hypothesis\n"
+            f"What you believe is causing the failure.\n\n"
+            f"## What is needed to fix it\n"
+            f"Concrete steps or code changes that should resolve the issue.\n\n"
+            f"## Relevant context\n"
+            f"{context}"
+        )
+        messages.append({"role": "user", "content": prompt})
+
+        analysis = f"*(LLM did not respond to stuck prompt)*"
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                max_tokens=2048,
+                timeout=120,
+                extra_headers={
+                    "HTTP-Referer": "https://github.com/GaberRB/benchmark",
+                    "X-Title": "AI Coding Benchmark exp-06",
+                },
+            )
+            analysis = resp.choices[0].message.content or analysis
+            p(f"\n\033[33m[STUCK] Análise recebida ({len(analysis)} chars)\033[0m")
+        except Exception as exc:
+            p(f"\n\033[31m[STUCK] Erro ao obter análise: {exc}\033[0m")
+
+        # Salvar .md
+        stuck_dir = Path(self.cfg.exp_dir) / "stuck"
+        stuck_dir.mkdir(exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_model = self.model_name.replace("/", "--").replace(":", "--")
+        md_path = stuck_dir / f"{safe_model}_{self.arch_name}_{stage}_{ts}.md"
+
+        md_content = textwrap.dedent(f"""\
+            # Stuck Report — {stage}
+
+            | Campo | Valor |
+            |---|---|
+            | Modelo | `{self.model_name}` |
+            | Arquitetura | `{self.arch_name}` |
+            | Etapa | `{stage}` |
+            | Falhas consecutivas | {self.cfg.stuck_threshold} |
+            | Tool calls totais | {self.executor._total_calls} |
+            | Data | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} |
+
+            ---
+
+            ## Análise do modelo
+
+            {analysis}
+
+            ---
+
+            ## Contexto da falha
+
+            {context}
+        """)
+        md_path.write_text(md_content, encoding="utf-8")
+        p(f"\033[33m[STUCK] Relatório salvo: {md_path}\033[0m")
+        return analysis
 
     def _print_summary(self, build, tests, e2e, arch, agent):
         print(f"""
