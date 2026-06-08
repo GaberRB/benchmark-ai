@@ -138,14 +138,16 @@ padrão do Spring Initializr, Kotlin superou Java em custo e velocidade.
 
 ## Modos de Execução
 
-| Pasta | Linguagem | Build tool | Modo |
-|-------|-----------|------------|------|
-| `java-mode-1/` | Java | Maven | Agente único sequencial |
-| `java-mode-2/` | Java | Maven | Orquestrador + 7 subagentes paralelos |
-| `kotlin-mode-1/` | Kotlin | Maven | Agente único sequencial |
-| `kotlin-mode-2/` | Kotlin | Maven | Orquestrador + 7 subagentes paralelos |
-| `java-gradle-mode-1/` | Java | **Gradle** | Agente único sequencial |
-| `kotlin-gradle-mode-1/` | Kotlin | **Gradle** | Agente único sequencial |
+| Pasta | Linguagem | Framework | Build tool | Modo |
+|-------|-----------|-----------|------------|------|
+| `java-mode-1/` | Java | Spring Boot | Maven | Agente único sequencial |
+| `java-mode-2/` | Java | Spring Boot | Maven | Orquestrador + 7 subagentes paralelos |
+| `kotlin-mode-1/` | Kotlin | Spring Boot | Maven | Agente único sequencial |
+| `kotlin-mode-2/` | Kotlin | Spring Boot | Maven | Orquestrador + 7 subagentes paralelos |
+| `java-gradle-mode-1/` | Java | Spring Boot | **Gradle** | Agente único sequencial |
+| `kotlin-gradle-mode-1/` | Kotlin | Spring Boot | **Gradle** | Agente único sequencial |
+| `java-quarkus-maven-mode-1/` | Java | **Quarkus** | Maven | Agente único sequencial |
+| `java-quarkus-gradle-mode-1/` | Java | **Quarkus** | Gradle | Agente único sequencial |
 
 ## Como Reproduzir
 
@@ -157,12 +159,14 @@ Abra o Claude Code na raiz do repo e execute o guia desejado:
 
 | Guia | Descrição |
 |------|-----------|
-| [`guides/benchmark-java-modo-1.md`](guides/benchmark-java-modo-1.md) | Java · Maven · agente sequencial |
-| [`guides/benchmark-java-modo-2.md`](guides/benchmark-java-modo-2.md) | Java · Maven · orquestrador + subagentes |
-| [`guides/benchmark-kotlin-modo-1.md`](guides/benchmark-kotlin-modo-1.md) | Kotlin · Maven · agente sequencial |
-| [`guides/benchmark-kotlin-modo-2.md`](guides/benchmark-kotlin-modo-2.md) | Kotlin · Maven · orquestrador + subagentes |
-| [`guides/benchmark-java-gradle-modo-1.md`](guides/benchmark-java-gradle-modo-1.md) | Java · **Gradle** · agente sequencial |
-| [`guides/benchmark-kotlin-gradle-modo-1.md`](guides/benchmark-kotlin-gradle-modo-1.md) | Kotlin · **Gradle** · agente sequencial |
+| [`guides/benchmark-java-modo-1.md`](guides/benchmark-java-modo-1.md) | Java · Spring Boot · Maven · agente sequencial |
+| [`guides/benchmark-java-modo-2.md`](guides/benchmark-java-modo-2.md) | Java · Spring Boot · Maven · orquestrador + subagentes |
+| [`guides/benchmark-kotlin-modo-1.md`](guides/benchmark-kotlin-modo-1.md) | Kotlin · Spring Boot · Maven · agente sequencial |
+| [`guides/benchmark-kotlin-modo-2.md`](guides/benchmark-kotlin-modo-2.md) | Kotlin · Spring Boot · Maven · orquestrador + subagentes |
+| [`guides/benchmark-java-gradle-modo-1.md`](guides/benchmark-java-gradle-modo-1.md) | Java · Spring Boot · **Gradle** · agente sequencial |
+| [`guides/benchmark-kotlin-gradle-modo-1.md`](guides/benchmark-kotlin-gradle-modo-1.md) | Kotlin · Spring Boot · **Gradle** · agente sequencial |
+| [`guides/benchmark-java-quarkus-maven-modo-1.md`](guides/benchmark-java-quarkus-maven-modo-1.md) | Java · **Quarkus** · Maven · agente sequencial |
+| [`guides/benchmark-java-quarkus-gradle-modo-1.md`](guides/benchmark-java-quarkus-gradle-modo-1.md) | Java · **Quarkus** · Gradle · agente sequencial |
 
 Os resultados (JSON + HTML) são gerados em `tools/reports/` — ignorados pelo git (cada um gera os seus).
 
@@ -279,3 +283,64 @@ linguagem precisam controlar a build tool separadamente para isolar o efeito da 
 testasse apenas Maven, concluiria que Kotlin é 140% mais caro que Java. Se testasse apenas Gradle,
 concluiria que são praticamente equivalentes — Kotlin até ligeiramente mais barato. A variável era
 a ferramenta de build, não a linguagem.
+
+---
+
+## Variante Quarkus — Spring Boot vs Quarkus (Java)
+
+> Framework: **Quarkus 3.8.3** · Linguagem: Java 21 · Modelo: `claude-sonnet-4-6`  
+> Variável testada: framework HTTP — Spring Boot (MVC/DI Spring) vs Quarkus (JAX-RS/CDI)
+
+### Diferenças técnicas: Spring Boot vs Quarkus
+
+| Aspecto | Spring Boot | Quarkus |
+|---------|------------|---------|
+| REST | `@RestController` / `@GetMapping` | `@Path` / `@GET` (JAX-RS) |
+| Injeção | `@Service` / `@Autowired` | `@ApplicationScoped` / `@Inject` (CDI) |
+| Exceções | `@RestControllerAdvice` | `@Provider ExceptionMapper<T>` |
+| Testes | `@SpringBootTest` + MockMvc | `@QuarkusTest` + RestAssured |
+| Dev | `spring-boot:run` / `bootRun` | `quarkus:dev` / `quarkusDev` |
+| Coverage | JaCoCo standalone | `quarkus-jacoco` (mesmo CSV) |
+
+O `collector.py` e o `snapshot.py` funcionam sem modificação — a saída JaCoCo (`target/site/jacoco/jacoco.csv`) é idêntica.
+
+### Resultados Quarkus — Maven
+
+> 🔄 A preencher após execução do guia
+
+| | |
+|---|---|
+| 💰 Custo | — |
+| ⏱ Duração | — |
+| 📡 API calls | — |
+| 🐛 Erros | — |
+| 📏 LOC produção | — |
+| 🎯 Cobertura linha | — |
+| ✅ E2E | — / 12 |
+
+### Resultados Quarkus — Gradle
+
+> 🔄 A preencher após execução do guia
+
+| | |
+|---|---|
+| 💰 Custo | — |
+| ⏱ Duração | — |
+| 📡 API calls | — |
+| 🐛 Erros | — |
+| 📏 LOC produção | — |
+| 🎯 Cobertura linha | — |
+| ✅ E2E | — / 12 |
+
+### Spring Boot vs Quarkus — Comparativo completo (Java)
+
+> 🔄 A preencher após execução dos guias Quarkus
+
+| Variante | Framework | Build | Custo | Duração | Erros | LOC prod | Cob. linha | E2E |
+|---|---|---|---|---|---|---|---|---|
+| `java-mode-1` | Spring Boot | Maven | $1,46 | 5,4 min | 2 | 198 | 89,1% | 12/12 |
+| `java-gradle-mode-1` | Spring Boot | Gradle | $2,18 | 5,4 min | 1 | 188 | 93,0% | 12/12 |
+| `java-quarkus-maven-mode-1` | **Quarkus** | Maven | — | — | — | — | — | — |
+| `java-quarkus-gradle-mode-1` | **Quarkus** | Gradle | — | — | — | — | — | — |
+
+**Hipótese:** O modelo tem menos exposição a JAX-RS + CDI (Quarkus) comparado com Spring MVC + Spring DI nos dados de treinamento. Isso pode se refletir em mais erros de compilação e maior custo. Ou pode ser o contrário — Quarkus tem uma configuração mais simples e menos verbosa que o modelo executa com menos fricção.
