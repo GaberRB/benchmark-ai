@@ -7,6 +7,13 @@
 > **MODELO OBRIGATÓRIO:** Esta sessão e todos os subagentes devem rodar com `claude-sonnet-4-6`.
 > Ao criar cada subagente, especifique `model: claude-sonnet-4-6` no prompt.
 
+> ⛔ **ESCOPO RESTRITO — LEIA ANTES DE QUALQUER AÇÃO**
+> - Você e todos os subagentes devem trabalhar **EXCLUSIVAMENTE** no diretório `kotlin-mode-2/`
+> - **NÃO leia, NÃO explore e NÃO referencie** nenhum outro diretório de implementação (`java-*`, `kotlin-gradle-*`, `java-quarkus-*`, etc.)
+> - **NÃO crie** guias, arquivos de configuração ou diretórios fora de `kotlin-mode-2/src/`
+> - Se você ou um subagente encontrar outros experimentos no filesystem, **ignore-os completamente**
+> - O framework é **Spring Boot + Maven** — não há variante Quarkus para este guia
+
 ---
 
 ## PASSO 1 — Capturar Session ID do Orquestrador

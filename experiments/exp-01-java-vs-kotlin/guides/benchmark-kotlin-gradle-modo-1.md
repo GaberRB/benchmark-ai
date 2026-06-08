@@ -7,6 +7,13 @@
 > **MODELO OBRIGATÓRIO:** Esta sessão deve rodar com `claude-sonnet-4-6`.
 > Confirme executando: `claude --version` e verificando o modelo ativo nas configurações.
 
+> ⛔ **ESCOPO RESTRITO — LEIA ANTES DE QUALQUER AÇÃO**
+> - Você deve trabalhar **EXCLUSIVAMENTE** no diretório `kotlin-gradle-mode-1/`
+> - **NÃO leia, NÃO explore e NÃO referencie** nenhum outro diretório de implementação (`java-*`, `kotlin-mode-*`, `java-quarkus-*`, etc.)
+> - **NÃO crie** guias, arquivos de configuração ou diretórios fora de `kotlin-gradle-mode-1/src/`
+> - Se você encontrar outros experimentos no filesystem, **ignore-os completamente**
+> - O framework é **Spring Boot + Gradle** — não há variante Quarkus para este guia
+
 ---
 
 ## PASSO 0 — Verificar Gradle instalado
