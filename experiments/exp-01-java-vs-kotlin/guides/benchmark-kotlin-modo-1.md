@@ -23,10 +23,10 @@ Get-Content (Get-ChildItem "$env:USERPROFILE\.claude\sessions\" | Sort-Object La
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --pre --language kotlin
+python tools/snapshot.py --pre --language kotlin
 ```
 
-Confirme que `metrics/reports/snapshot_kotlin_pre_*.json` foi criado.
+Confirme que `tools/reports/snapshot_kotlin_pre_*.json` foi criado.
 
 ---
 
@@ -227,11 +227,11 @@ Stop-Process -Name "java" -Force -ErrorAction SilentlyContinue
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --post --language kotlin --session-id <SESSION-ID>
-python metrics/collector.py --session-id <SESSION-ID> --language kotlin
+python tools/snapshot.py --post --language kotlin --session-id <SESSION-ID>
+python tools/collector.py --session-id <SESSION-ID> --language kotlin
 ```
 
-Confirme que `metrics/reports/kotlin_*.json` foi criado.
+Confirme que `tools/reports/kotlin_*.json` foi criado.
 
 ---
 
@@ -251,7 +251,7 @@ cloc kotlin-implementation/src/test/kotlin --json | ConvertFrom-Json | Select-Ob
 
 ## PASSO 10 — Atualizar JSON com dados manuais
 
-Abra `metrics/reports/kotlin_<timestamp>.json` e adicione:
+Abra `tools/reports/kotlin_<timestamp>.json` e adicione:
 
 ```json
 {
@@ -279,8 +279,8 @@ Após preenchido o JSON com `code_quality` e `e2e` no Passo 10, gere o relatóri
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/report.py
-# Abre automaticamente: metrics/reports/benchmark_report_<timestamp>.html
+python tools/report.py
+# Abre automaticamente: tools/reports/benchmark_report_<timestamp>.html
 ```
 
 ---
@@ -291,7 +291,7 @@ python metrics/report.py
 ✅ BENCHMARK KOTLIN MODO 1 — CONCLUÍDO
 
 Session ID: <UUID>
-Arquivo de métricas: metrics/reports/kotlin_<timestamp>.json
+Arquivo de métricas: tools/reports/kotlin_<timestamp>.json
 
 Critérios de entrega:
 [ ] .\mvnw.cmd compile — BUILD SUCCESS
@@ -312,4 +312,4 @@ Duração sessão: (ver JSON)
 - `.\mvnw.cmd compile` → BUILD SUCCESS
 - `.\mvnw.cmd test` → 0 failures, 0 errors, cobertura ≥ 80%
 - 12/12 cenários E2E passando
-- `metrics/reports/kotlin_*.json` gerado e preenchido
+- `tools/reports/kotlin_*.json` gerado e preenchido

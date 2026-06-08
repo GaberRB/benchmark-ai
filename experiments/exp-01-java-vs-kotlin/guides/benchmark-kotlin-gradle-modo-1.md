@@ -39,10 +39,10 @@ Get-Content (Get-ChildItem "$env:USERPROFILE\.claude\sessions\" | Sort-Object La
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --pre --language kotlin-gradle
+python tools/snapshot.py --pre --language kotlin-gradle
 ```
 
-Confirme que `metrics/reports/snapshot_kotlin-gradle_pre_*.json` foi criado.
+Confirme que `tools/reports/snapshot_kotlin-gradle_pre_*.json` foi criado.
 
 ---
 
@@ -246,11 +246,11 @@ Stop-Process -Name "java" -Force -ErrorAction SilentlyContinue
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --post --language kotlin-gradle --session-id <SESSION-ID>
-python metrics/collector.py --session-id <SESSION-ID> --language kotlin-gradle
+python tools/snapshot.py --post --language kotlin-gradle --session-id <SESSION-ID>
+python tools/collector.py --session-id <SESSION-ID> --language kotlin-gradle
 ```
 
-Confirme que `metrics/reports/kotlin-gradle_*.json` foi criado.
+Confirme que `tools/reports/kotlin-gradle_*.json` foi criado.
 
 ---
 
@@ -270,7 +270,7 @@ cloc experiments/exp-01-java-vs-kotlin/kotlin-gradle-mode-1/src/test/kotlin --js
 
 ## PASSO 10 — Atualizar JSON com dados manuais
 
-Abra `metrics/reports/kotlin-gradle_<timestamp>.json` e adicione:
+Abra `tools/reports/kotlin-gradle_<timestamp>.json` e adicione:
 
 ```json
 {
@@ -296,8 +296,8 @@ Abra `metrics/reports/kotlin-gradle_<timestamp>.json` e adicione:
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/report.py
-# Abre automaticamente: metrics/reports/benchmark_report_<timestamp>.html
+python tools/report.py
+# Abre automaticamente: tools/reports/benchmark_report_<timestamp>.html
 ```
 
 ---
@@ -308,7 +308,7 @@ python metrics/report.py
 ✅ BENCHMARK KOTLIN GRADLE MODO 1 — CONCLUÍDO
 
 Session ID: <UUID>
-Arquivo de métricas: metrics/reports/kotlin-gradle_<timestamp>.json
+Arquivo de métricas: tools/reports/kotlin-gradle_<timestamp>.json
 
 Critérios de entrega:
 [ ] gradle compileKotlin — BUILD SUCCESSFUL
@@ -330,4 +330,4 @@ Duração sessão: (ver JSON)
 - `gradle test` → 0 failures, 0 errors
 - `gradle check` → cobertura ≥ 80%
 - 12/12 cenários E2E passando
-- `metrics/reports/kotlin-gradle_*.json` gerado e preenchido
+- `tools/reports/kotlin-gradle_*.json` gerado e preenchido

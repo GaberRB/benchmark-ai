@@ -29,7 +29,7 @@ Get-Date -Format "yyyy-MM-ddTHH:mm:ss"
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --pre --language kotlin-mode2
+python tools/snapshot.py --pre --language kotlin-mode2
 ```
 
 ---
@@ -326,15 +326,15 @@ Calcule: `wall_clock_time_min = (timestamp_fim - timestamp_inicio_passo1) em min
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
 
-python metrics/snapshot.py --post --language kotlin-mode2 --session-id <SESSION-ORQUESTRADOR>
-python metrics/collector.py --session-id <SESSION-ORQUESTRADOR> --language kotlin-mode2-orchestrator
-python metrics/collector.py --session-id <SESSION_T0> --language kotlin-mode2-task-T0
-python metrics/collector.py --session-id <SESSION_T1> --language kotlin-mode2-task-T1
-python metrics/collector.py --session-id <SESSION_T2> --language kotlin-mode2-task-T2
-python metrics/collector.py --session-id <SESSION_T3> --language kotlin-mode2-task-T3
-python metrics/collector.py --session-id <SESSION_T4> --language kotlin-mode2-task-T4
-python metrics/collector.py --session-id <SESSION_T5> --language kotlin-mode2-task-T5
-python metrics/collector.py --session-id <SESSION_T6> --language kotlin-mode2-task-T6
+python tools/snapshot.py --post --language kotlin-mode2 --session-id <SESSION-ORQUESTRADOR>
+python tools/collector.py --session-id <SESSION-ORQUESTRADOR> --language kotlin-mode2-orchestrator
+python tools/collector.py --session-id <SESSION_T0> --language kotlin-mode2-task-T0
+python tools/collector.py --session-id <SESSION_T1> --language kotlin-mode2-task-T1
+python tools/collector.py --session-id <SESSION_T2> --language kotlin-mode2-task-T2
+python tools/collector.py --session-id <SESSION_T3> --language kotlin-mode2-task-T3
+python tools/collector.py --session-id <SESSION_T4> --language kotlin-mode2-task-T4
+python tools/collector.py --session-id <SESSION_T5> --language kotlin-mode2-task-T5
+python tools/collector.py --session-id <SESSION_T6> --language kotlin-mode2-task-T6
 ```
 
 ---
@@ -350,7 +350,7 @@ cloc kotlin-implementation-mode2/src/test/kotlin --json | ConvertFrom-Json | Sel
 
 ## PASSO 12 — Atualizar JSON do orquestrador com dados manuais
 
-Abra `metrics/reports/kotlin-mode2-orchestrator_*.json` e adicione:
+Abra `tools/reports/kotlin-mode2-orchestrator_*.json` e adicione:
 
 ```json
 {
@@ -399,7 +399,7 @@ Critérios de entrega:
 
 Wall clock time: X min | CPU equivalent: Y min | Speedup: Z x
 Integration conflicts: N
-Arquivos gerados: metrics/reports/kotlin-mode2-*.json (8 arquivos)
+Arquivos gerados: tools/reports/kotlin-mode2-*.json (8 arquivos)
 ```
 
 ---

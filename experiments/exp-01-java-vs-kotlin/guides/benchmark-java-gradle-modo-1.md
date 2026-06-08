@@ -42,10 +42,10 @@ Get-Content (Get-ChildItem "$env:USERPROFILE\.claude\sessions\" | Sort-Object La
 A partir da raiz do benchmark (`C:\Users\grios\OneDrive\Desktop\benchmark`):
 
 ```powershell
-python metrics/snapshot.py --pre --language java-gradle
+python tools/snapshot.py --pre --language java-gradle
 ```
 
-Confirme que o arquivo `metrics/reports/snapshot_java-gradle_pre_*.json` foi criado.
+Confirme que o arquivo `tools/reports/snapshot_java-gradle_pre_*.json` foi criado.
 
 ---
 
@@ -251,11 +251,11 @@ Volte para a raiz do benchmark e execute (substituindo `<SESSION-ID>` pelo valor
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --post --language java-gradle --session-id <SESSION-ID>
-python metrics/collector.py --session-id <SESSION-ID> --language java-gradle
+python tools/snapshot.py --post --language java-gradle --session-id <SESSION-ID>
+python tools/collector.py --session-id <SESSION-ID> --language java-gradle
 ```
 
-Confirme que `metrics/reports/java-gradle_*.json` foi criado.
+Confirme que `tools/reports/java-gradle_*.json` foi criado.
 
 ---
 
@@ -279,7 +279,7 @@ cloc experiments/exp-01-java-vs-kotlin/java-gradle-mode-1/src/test/java --json |
 
 ## PASSO 10 — Atualizar JSON com dados manuais
 
-Abra o arquivo `metrics/reports/java-gradle_<timestamp>.json` e adicione/atualize os campos:
+Abra o arquivo `tools/reports/java-gradle_<timestamp>.json` e adicione/atualize os campos:
 
 ```json
 {
@@ -307,8 +307,8 @@ Abra o arquivo `metrics/reports/java-gradle_<timestamp>.json` e adicione/atualiz
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/report.py
-# Abre automaticamente: metrics/reports/benchmark_report_<timestamp>.html
+python tools/report.py
+# Abre automaticamente: tools/reports/benchmark_report_<timestamp>.html
 ```
 
 ---
@@ -321,7 +321,7 @@ Ao finalizar, reporte o seguinte resumo:
 ✅ BENCHMARK JAVA GRADLE MODO 1 — CONCLUÍDO
 
 Session ID: <UUID>
-Arquivo de métricas: metrics/reports/java-gradle_<timestamp>.json
+Arquivo de métricas: tools/reports/java-gradle_<timestamp>.json
 
 Critérios de entrega:
 [ ] gradle compileJava — BUILD SUCCESSFUL
@@ -345,4 +345,4 @@ A sessão só está concluída quando:
 - `gradle test` → 0 failures, 0 errors
 - `gradle check` → cobertura ≥ 80%
 - 12/12 cenários E2E passando
-- `metrics/reports/java-gradle_*.json` gerado e preenchido
+- `tools/reports/java-gradle_*.json` gerado e preenchido

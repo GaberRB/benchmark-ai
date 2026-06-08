@@ -26,10 +26,10 @@ Get-Content (Get-ChildItem "$env:USERPROFILE\.claude\sessions\" | Sort-Object La
 A partir da raiz do benchmark (`C:\Users\grios\OneDrive\Desktop\benchmark`):
 
 ```powershell
-python metrics/snapshot.py --pre --language java
+python tools/snapshot.py --pre --language java
 ```
 
-Confirme que o arquivo `metrics/reports/snapshot_java_pre_*.json` foi criado.
+Confirme que o arquivo `tools/reports/snapshot_java_pre_*.json` foi criado.
 
 ---
 
@@ -228,11 +228,11 @@ Volte para a raiz do benchmark e execute (substituindo `<SESSION-ID>` pelo valor
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/snapshot.py --post --language java --session-id <SESSION-ID>
-python metrics/collector.py --session-id <SESSION-ID> --language java
+python tools/snapshot.py --post --language java --session-id <SESSION-ID>
+python tools/collector.py --session-id <SESSION-ID> --language java
 ```
 
-Confirme que `metrics/reports/java_*.json` foi criado.
+Confirme que `tools/reports/java_*.json` foi criado.
 
 ---
 
@@ -256,7 +256,7 @@ cloc java-implementation/src/test/java --json | ConvertFrom-Json | Select-Object
 
 ## PASSO 10 — Atualizar JSON com dados manuais
 
-Abra o arquivo `metrics/reports/java_<timestamp>.json` e adicione/atualize os campos:
+Abra o arquivo `tools/reports/java_<timestamp>.json` e adicione/atualize os campos:
 
 ```json
 {
@@ -286,8 +286,8 @@ Após preenchido o JSON com `code_quality` e `e2e` no Passo 10, gere o relatóri
 
 ```powershell
 cd C:\Users\grios\OneDrive\Desktop\benchmark
-python metrics/report.py
-# Abre automaticamente: metrics/reports/benchmark_report_<timestamp>.html
+python tools/report.py
+# Abre automaticamente: tools/reports/benchmark_report_<timestamp>.html
 ```
 
 ---
@@ -300,7 +300,7 @@ Ao finalizar, reporte o seguinte resumo:
 ✅ BENCHMARK JAVA MODO 1 — CONCLUÍDO
 
 Session ID: <UUID>
-Arquivo de métricas: metrics/reports/java_<timestamp>.json
+Arquivo de métricas: tools/reports/java_<timestamp>.json
 
 Critérios de entrega:
 [ ] .\mvnw.cmd compile — BUILD SUCCESS
@@ -323,4 +323,4 @@ A sessão só está concluída quando:
 - `.\mvnw.cmd compile` → BUILD SUCCESS
 - `.\mvnw.cmd test` → 0 failures, 0 errors, cobertura ≥ 80%
 - 12/12 cenários E2E passando
-- `metrics/reports/java_*.json` gerado e preenchido
+- `tools/reports/java_*.json` gerado e preenchido
