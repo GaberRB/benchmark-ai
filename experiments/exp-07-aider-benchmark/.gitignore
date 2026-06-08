@@ -1,0 +1,6 @@
+implementations/**/src/
+implementations/**/target/
+results/
+__pycache__/
+*.pyc
+.aider*
