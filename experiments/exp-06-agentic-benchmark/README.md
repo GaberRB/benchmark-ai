@@ -89,9 +89,12 @@ flowchart TD
     I --> E
     E -->|IMPLEMENTATION COMPLETE| J[Harness verifica independentemente]
     J -->|build + testes ≥80% + E2E 12/12 OK| K[✅ Salva JSON de resultado]
-    J -->|algum critério falhou| L[Injeta feedback detalhado no chat]
+    J -->|algum critério falhou| L[Injeta feedback com body + regra da spec]
     L --> D
-    E -->|max build ou test failures| M[⛔ Interrompe — salva motivo da falha]
+    E -->|max_build_failures ou max_test_failures| M[⛔ Limite de falhas — salva motivo]
+    J -->|max_e2e_failures atingido| N[⛔ Limite E2E — salva motivo]
+    E -->|stuck_threshold em build/test| O[📄 LLM analisa problema → salva .md em stuck/]
+    J -->|stuck_threshold em E2E| O
 ```
 
 ### Troca de mensagens ao longo do tempo
@@ -121,18 +124,26 @@ sequenceDiagram
         alt todos os critérios OK
             H-->>L: loop encerra
         else algum critério falhou
-            H-->>L: feedback detalhado com o que faltou
+            H-->>L: feedback com body HTTP + regra da spec por cenário
         end
+    end
+    opt stuck_threshold atingido em qualquer etapa
+        H->>L: "Analyze the problem: what did you try, root cause hypothesis, fix needed"
+        L-->>H: análise estruturada (Problem / Tried / Root cause / Fix needed)
+        H->>H: salva stuck/<modelo>_<arch>_<etapa>_<ts>.md
+        Note over H: convergence_reason = "stuck" — loop encerra
     end
     H->>H: salva results/exp06_*.json
 ```
 
 ### Condições de término
 
-O loop só termina em três situações:
+O loop só termina em cinco situações:
 1. **Sucesso**: harness confirma que build compila, testes passam com ≥ 80% de cobertura e os 12 cenários E2E estão corretos.
-2. **Limite de falhas**: o modelo atingiu o máximo configurado de falhas consecutivas de build ou teste.
-3. **Desistência**: o modelo para de usar ferramentas sem sinalizar conclusão.
+2. **Limite de build/teste**: o modelo atingiu `max_build_failures` ou `max_test_failures` falhas consecutivas.
+3. **Limite de E2E**: o modelo atingiu `max_e2e_failures` verificações E2E consecutivas sem passar.
+4. **Stuck**: qualquer etapa (build, test ou E2E) falhou `stuck_threshold` vezes seguidas — o harness pede ao LLM uma análise estruturada do problema, salva o resultado em `stuck/` e encerra o run (para revisão humana ou por outro modelo).
+5. **Desistência**: o modelo para de usar ferramentas sem sinalizar conclusão.
 
 ---
 
@@ -156,21 +167,43 @@ Quando o LLM escreve `IMPLEMENTATION COMPLETE`, o harness **não confia** — ro
 3. 12 cenários E2E HTTP → todos os endpoints respondem corretamente?
 ```
 
-Se qualquer critério falhar, o harness injeta no chat um feedback detalhado com o resultado exato:
+Se qualquer critério falhar, o harness injeta no chat um feedback detalhado com o resultado exato. O feedback inclui: contador de tentativa, ✓/✗ por cenário, body HTTP da resposta e a regra exata da spec que o cenário valida:
 
 ```
-Harness verification FAILED after your IMPLEMENTATION COMPLETE claim.
+Harness verification FAILED (tentativa E2E #3) after your IMPLEMENTATION COMPLETE claim.
 
 Unit tests: 15/16 passed — fix the failing tests.
 Coverage: 0.0% — need ≥80%. Add more test cases to cover uncovered code paths.
-E2E scenarios: 9/12 passed. Failing:
-  - E2E-03: POST sem title 400 expected=400 got=500
-  - E2E-07: GET invalido 404 expected=404 got=400
+E2E scenarios: 10/12 passed. Failing:
+  ✗ E2E-07: GET /tasks/{id} inválido — expected=404 got=400  body={"timestamp":"...","status":400}
+     spec rule: GET /tasks/{id} → 404 se não encontrado. IDs são UUIDs v4. Uma string inválida
+     não é um UUID válido — deve retornar 404 semanticamente, não 400.
+     Solução: use @PathVariable String id + UUID.fromString() em try/catch.
+  ✗ E2E-09: PUT /tasks/{id} inválido — expected=404 got=400  body={"timestamp":"...","status":400}
+     spec rule: (mesma regra UUID acima)
 
 Fix all issues above, then declare IMPLEMENTATION COMPLETE again.
 ```
 
 O LLM só sai do loop quando todos os critérios passam simultaneamente.
+
+---
+
+## Sistema de análise de stuck
+
+Quando qualquer etapa (build, test ou E2E) falha `stuck_threshold` vezes consecutivas (padrão: 3), o harness reconhece que o modelo entrou em loop sem progresso e aciona a análise:
+
+1. **Interrompe o loop agentico normal** e envia um prompt estruturado pedindo ao LLM que documente o problema:
+   - O que está tentando fazer
+   - O que já tentou
+   - Hipótese de causa raiz
+   - O que seria necessário para corrigir
+
+2. **Salva o resultado** em `stuck/<modelo>_<arch>_<etapa>_<ts>.md` com metadata da run (modelo, arquitetura, etapa travada, número de falhas) + a análise gerada pelo LLM.
+
+3. **Encerra o run** com `convergence_reason = "stuck"`.
+
+O arquivo gerado fica disponível para análise humana ou para ser enviado a outro modelo como contexto inicial de diagnóstico.
 
 ---
 
@@ -196,6 +229,9 @@ Cada run salva um JSON em `results/` com dois blocos principais:
     "tool_breakdown":    { "run_command": 31, "write_file": 12, "read_file": 4 },
     "command_breakdown": { "mvn compile": 8, "mvn test": 6, "other": 17 },
     "convergence_reason": "success",
+    "completion_attempts": 3,
+    "e2e_attempts": 3,
+    "e2e_fail_streak_at_end": 0,
     "build_failures": 3,
     "test_failures":  1,
     "first_build_success_at_call": 5,
@@ -206,7 +242,7 @@ Cada run salva um JSON em `results/` com dois blocos principais:
 }
 ```
 
-`convergence_reason` pode ser: `success` · `gave_up` · `max_build_failures` · `max_test_failures` · `auth_error` · `no_tool_support`
+`convergence_reason` pode ser: `success` · `gave_up` · `max_build_failures` · `max_test_failures` · `max_e2e_failures` · `stuck` · `auth_error` · `no_tool_support`
 
 ---
 
@@ -215,9 +251,12 @@ Cada run salva um JSON em `results/` com dois blocos principais:
 | Modelo | ID OpenRouter | In ($/M tok) | Out ($/M tok) | Tool use |
 |--------|---------------|-------------|--------------|----------|
 | DeepSeek V3 | `deepseek/deepseek-chat` | $0,14 | $0,28 | ✅ |
+| Qwen 2.5 Coder 32B | `qwen/qwen-2.5-coder-32b-instruct` | $0,10 | $0,20 | ❌ |
 | Gemini 2.0 Flash | `google/gemini-2.0-flash-001` | $0,075 | $0,30 | ✅ |
 | Llama 3.3 70B | `meta-llama/llama-3.3-70b-instruct` | $0,10 | $0,20 | ✅ |
 | Claude Sonnet 4.5 | `anthropic/claude-sonnet-4-5` | $3,00 | $15,00 | ✅ |
+
+> Qwen 2.5 Coder 32B não suporta tool use nativo — o harness injeta as ferramentas via formato texto no prompt.
 
 Cada modelo é testado nas 7 arquiteturas: `mvc`, `vertical-slice`, `clean-architecture`, `hexagonal`, `ddd`, `event-driven`, `cqrs`.
 
@@ -287,6 +326,9 @@ exp-06-agentic-benchmark/
 │       ├── pom.xml               # Spring Boot 3.2 + JaCoCo 0.8.11 (não modificado)
 │       └── src/                  # Gerado autonomamente pelo LLM durante o benchmark
 │
-└── results/
-    └── exp06_<modelo>_<arch>_<ts>.json   # Um JSON por run com todas as métricas
+├── results/
+│   └── exp06_<modelo>_<arch>_<ts>.json   # Um JSON por run com todas as métricas
+│
+└── stuck/
+    └── <modelo>_<arch>_<etapa>_<ts>.md   # Análise estruturada gerada pelo LLM ao ficar preso
 ```

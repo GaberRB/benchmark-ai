@@ -91,9 +91,12 @@ flowchart TD
     I --> E
     E -->|IMPLEMENTATION COMPLETE| J[Harness verifica independentemente]
     J -->|build + testes ≥80% + E2E 12/12 OK| K[✅ Salva JSON de resultado]
-    J -->|algum critério falhou| L[Injeta feedback detalhado no chat]
+    J -->|algum critério falhou| L[Injeta feedback com body + regra da spec]
     L --> D
-    E -->|max build ou test failures| M[⛔ Interrompe — salva motivo da falha]
+    E -->|max_build_failures ou max_test_failures| M[⛔ Limite de falhas — salva motivo]
+    J -->|max_e2e_failures atingido| N[⛔ Limite E2E — salva motivo]
+    E -->|stuck_threshold em build/test| O[📄 LLM analisa problema → salva .md em stuck/]
+    J -->|stuck_threshold em E2E| O
 ```
 
 O LLM só sai do loop quando o harness confirma independentemente que **build compila, testes passam com ≥ 80% de cobertura e todos os 12 cenários E2E estão corretos**. Se declarar "IMPLEMENTATION COMPLETE" antes disso, recebe o feedback exato do que faltou e continua.
@@ -103,6 +106,7 @@ O LLM só sai do loop quando o harness confirma independentemente que **build co
 | Modelo | Provider | In ($/M tokens) | Out ($/M tokens) |
 |--------|----------|-----------------|------------------|
 | DeepSeek V3 | deepseek | $0,14 | $0,28 |
+| Qwen 2.5 Coder 32B | Alibaba | $0,10 | $0,20 |
 | Gemini 2.0 Flash | Google | $0,075 | $0,30 |
 | Llama 3.3 70B | Meta | $0,10 | $0,20 |
 | Claude Sonnet 4.5 | Anthropic | $3,00 | $15,00 |
@@ -116,7 +120,10 @@ Além dos critérios de qualidade (build, tests, E2E, arquitetura), cada run sal
   "total_tool_calls": 47,
   "tool_breakdown": { "run_command": 31, "write_file": 12, "read_file": 4 },
   "command_breakdown": { "mvn compile": 8, "mvn test": 6, "other": 17 },
-  "convergence_reason": "success | gave_up | max_build_failures | max_test_failures | auth_error",
+  "convergence_reason": "success | gave_up | max_build_failures | max_test_failures | max_e2e_failures | stuck | auth_error",
+  "completion_attempts": 3,
+  "e2e_attempts": 3,
+  "e2e_fail_streak_at_end": 0,
   "build_failures": 3,
   "test_failures": 1,
   "first_build_success_at_call": 5,
