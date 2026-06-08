@@ -39,6 +39,8 @@ O que evolui é **quem controla o loop**:
 
 ## Experimento 01 — Java vs Kotlin
 
+### Variante Maven (build tool padrão do Spring Initializr para Java)
+
 | | Java | Kotlin |
 |---|---|---|
 | Custo | **$1,46** 🏆 | $3,50 |
@@ -46,9 +48,20 @@ O que evolui é **quem controla o loop**:
 | Cobertura linha | 89,1% | **94,3%** 🏆 |
 | E2E (12 cenários) | 12/12 ✅ | 12/12 ✅ |
 
-Java foi 2,4× mais barato e 2× mais rápido — provavelmente por ter mais exemplos nos dados de treinamento do modelo. Kotlin produz cobertura maior mas custa mais.
+Java foi 2,4× mais barato e 2× mais rápido. Kotlin produz cobertura maior, mas com Maven o custo foi 140% superior.
 
-[→ Análise completa](experiments/exp-01-java-vs-kotlin/README.md)
+### Variante Gradle (build tool padrão do Spring Initializr para Kotlin)
+
+| | Java Gradle | Kotlin Gradle |
+|---|---|---|
+| Custo | $2,18 | **$1,93** 🏆 |
+| Duração | 5,4 min | **4,51 min** 🏆 |
+| Cobertura linha | 93,0% | **94,1%** 🏆 |
+| E2E (12 cenários) | 12/12 ✅ | 12/12 ✅ |
+
+Com Gradle, Kotlin superou Java — confirmando que o atrito do Kotlin Maven vinha do `kotlin-maven-plugin` (configuração rara nos dados de treinamento), não da linguagem em si.
+
+[→ Análise completa + comparação Maven vs Gradle](experiments/exp-01-java-vs-kotlin/README.md)
 
 ---
 

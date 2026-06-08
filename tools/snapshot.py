@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--pre",  action="store_true", help="Snapshot pré-sessão")
     parser.add_argument("--post", action="store_true", help="Snapshot pós-sessão")
     parser.add_argument("--language",   required=True,
-                        choices=["java", "kotlin", "arch-hexagonal", "arch-clean",
+                        choices=["java", "kotlin", "java-gradle", "kotlin-gradle", "arch-hexagonal", "arch-clean",
                                  "arch-cqrs", "arch-mvc", "arch-vertical-slice"])
     parser.add_argument("--session-id", default=None,  help="UUID da sessão Claude Code")
     args = parser.parse_args()
