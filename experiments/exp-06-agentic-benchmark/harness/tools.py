@@ -2,10 +2,16 @@
 
 import os
 import subprocess
+import threading
 from collections import defaultdict
 from pathlib import Path
 
 from .terminal import shell_args
+
+# Comandos que iniciam servidores e rodam indefinidamente — bloqueados no tool
+_BLOCKED_COMMANDS = ("spring-boot:run", "spring-boot:start")
+# Timeout padrão para comandos normais (mvn compile, mvn test, ls, etc.)
+_DEFAULT_TIMEOUT = 300
 
 
 class ToolExecutor:
@@ -40,9 +46,22 @@ class ToolExecutor:
         call_n = self._total_calls
         self.call_count["run_command"] += 1
 
-        # Categorizar para command_breakdown
         cmd_lower = command.strip().lower()
-        if cmd_lower.startswith("mvn compile"):
+
+        # Bloquear comandos que iniciam servidores — causam hang infinito
+        for blocked in _BLOCKED_COMMANDS:
+            if blocked in cmd_lower:
+                msg = (
+                    f"BLOCKED: '{blocked}' starts a long-running server and is not allowed "
+                    "during the benchmark. The harness starts the server automatically for "
+                    "E2E testing. Focus on compiling and running unit tests only."
+                )
+                print(f"    \033[31m[BLOCKED]\033[0m {command}", flush=True)
+                self.tool_calls.append({"call": call_n, "tool": "run_command", "command": command})
+                return {"stdout": "", "stderr": msg, "exit_code": -1}
+
+        # Categorizar para command_breakdown
+        if cmd_lower.startswith("mvn compile") or cmd_lower.startswith("mvn clean compile"):
             self.command_count["mvn compile"] += 1
         elif cmd_lower.startswith("mvn test"):
             self.command_count["mvn test"] += 1
@@ -58,31 +77,11 @@ class ToolExecutor:
             effective_cwd = self.impl_dir
 
         args, use_shell = shell_args(command, self.terminal)
-        try:
-            result = subprocess.run(
-                args,
-                shell=use_shell,
-                cwd=str(effective_cwd),
-                capture_output=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=300,
-            )
-            stdout = result.stdout
-            stderr = result.stderr
-            exit_code = result.returncode
-        except subprocess.TimeoutExpired:
-            stdout = ""
-            stderr = "TIMEOUT: command exceeded 300 seconds"
-            exit_code = -1
-        except Exception as exc:
-            stdout = ""
-            stderr = f"ERROR running command: {exc}"
-            exit_code = -1
+        stdout, stderr, exit_code = self._run_streaming(args, use_shell, effective_cwd, _DEFAULT_TIMEOUT)
 
         # Detectar marcos e contar falhas por fase
         combined = stdout + stderr
-        is_compile = cmd_lower.startswith("mvn compile")
+        is_compile = cmd_lower.startswith("mvn compile") or cmd_lower.startswith("mvn clean compile")
         is_test    = cmd_lower.startswith("mvn test")
 
         if is_compile:
@@ -102,7 +101,57 @@ class ToolExecutor:
                 self.last_test_failure_output = combined[-3000:]
 
         self.tool_calls.append({"call": call_n, "tool": "run_command", "command": command})
-        return {"stdout": stdout, "stderr": stderr, "exit_code": exit_code}
+        return {"stdout": stdout[-3000:], "stderr": stderr[-3000:], "exit_code": exit_code}
+
+    def _run_streaming(
+        self, args: str | list, use_shell: bool, cwd: Path, timeout: int
+    ) -> tuple[str, str, int]:
+        """Executa um subprocesso com streaming em tempo real para o terminal.
+
+        Imprime cada linha com prefixo '  |' conforme chega, e acumula o
+        output completo para retornar ao LLM ao final.
+        """
+        stdout_buf: list[str] = []
+        stderr_buf: list[str] = []
+
+        try:
+            proc = subprocess.Popen(
+                args,
+                shell=use_shell,
+                cwd=str(cwd),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except Exception as exc:
+            return "", f"ERROR starting process: {exc}", -1
+
+        def _drain(stream, buf: list[str]):
+            try:
+                for line in stream:
+                    buf.append(line)
+                    print(f"    \033[90m|\033[0m {line}", end="", flush=True)
+            except Exception:
+                pass
+
+        t_out = threading.Thread(target=_drain, args=(proc.stdout, stdout_buf), daemon=True)
+        t_err = threading.Thread(target=_drain, args=(proc.stderr, stderr_buf), daemon=True)
+        t_out.start()
+        t_err.start()
+
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            stderr_buf.append(f"\nTIMEOUT: command exceeded {timeout}s\n")
+            print(f"    \033[31m[TIMEOUT {timeout}s]\033[0m", flush=True)
+
+        t_out.join(timeout=5)
+        t_err.join(timeout=5)
+
+        return "".join(stdout_buf), "".join(stderr_buf), proc.returncode
 
     # ------------------------------------------------------------------
     # TOOL: write_file
@@ -161,12 +210,21 @@ class ToolExecutor:
     # Resumo de métricas
     # ------------------------------------------------------------------
 
-    def agent_behavior_summary(self, convergence_reason: str) -> dict:
+    def agent_behavior_summary(
+        self,
+        convergence_reason: str,
+        completion_attempts: int = 0,
+        e2e_attempts: int = 0,
+        e2e_fail_streak: int = 0,
+    ) -> dict:
         return {
             "total_tool_calls": self._total_calls,
             "tool_breakdown": dict(self.call_count),
             "command_breakdown": dict(self.command_count),
             "convergence_reason": convergence_reason,
+            "completion_attempts": completion_attempts,
+            "e2e_attempts": e2e_attempts,
+            "e2e_fail_streak_at_end": e2e_fail_streak,
             "build_failures": self.build_failures,
             "test_failures": self.test_failures,
             "first_build_success_at_call": self.first_build_success_at,

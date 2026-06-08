@@ -9,7 +9,7 @@ from string import Template
 
 from openai import OpenAI
 
-from .terminal import detect_terminal, TERMINAL_NOTE
+from .terminal import detect_terminal, terminal_env_description
 from .tools import ToolExecutor, TOOL_SCHEMAS
 from . import metrics as m
 
@@ -49,10 +49,11 @@ class BenchmarkHarness:
             print(msg, **kw, flush=True)
 
         p(f"\n{'='*60}")
-        p(f"  Modelo : {self.model_name}")
-        p(f"  Arch   : {self.arch_name}")
-        p(f"  Guia   : {self._guide_path()}")
-        p(f"  Dir    : {self.impl_dir}")
+        p(f"  Modelo   : {self.model_name}")
+        p(f"  Arch     : {self.arch_name}")
+        p(f"  Guia     : {self._guide_path()}")
+        p(f"  Dir      : {self.impl_dir}")
+        p(f"  Terminal : {self.terminal}")
         p(f"{'='*60}\n")
 
         self._clean_java_files()
@@ -64,6 +65,9 @@ class BenchmarkHarness:
 
         convergence_reason = "gave_up"
         total_calls = 0
+        completion_attempts  = 0   # quantas vezes LLM declarou IMPLEMENTATION COMPLETE
+        e2e_attempts         = 0   # quantas vezes o harness chegou a rodar o E2E
+        e2e_fail_streak      = 0   # falhas consecutivas de E2E (reset se outro critério falha antes)
         # Resultados em cache quando verificados dentro do loop (evita rerun duplo)
         _cached_build = _cached_tests = _cached_e2e = None
 
@@ -71,6 +75,7 @@ class BenchmarkHarness:
           f"(build max={self.cfg.max_build_failures} falhas | test max={self.cfg.max_test_failures} falhas)...")
 
         while True:
+            p(f"  → aguardando API ({self.model_name})...", end="\r")
             try:
                 response = self.client.chat.completions.create(
                     model=self.model_name,
@@ -78,6 +83,7 @@ class BenchmarkHarness:
                     tools=TOOL_SCHEMAS,
                     tool_choice="auto",
                     max_tokens=self.cfg.max_tokens_per_turn,
+                    timeout=180,
                     extra_headers={
                         "HTTP-Referer": "https://github.com/GaberRB/benchmark",
                         "X-Title": "AI Coding Benchmark exp-06",
@@ -111,13 +117,21 @@ class BenchmarkHarness:
             # LLM declarou conclusão — verificar de forma independente
             # ------------------------------------------------------------------
             if COMPLETION_SIGNAL in text_content:
-                p(f"\n[CHECK] LLM declarou conclusao ({self.executor._total_calls} tool calls). Verificando criterios...")
+                completion_attempts += 1
+                p(f"\n[CHECK #{completion_attempts}] LLM declarou conclusao "
+                  f"(tool calls totais={self.executor._total_calls}). Verificando criterios...")
 
                 chk_build = m.eval_build(self.impl_dir)
                 p(f"  Build     : {'OK' if chk_build['success'] else 'FAIL'}")
 
                 if not chk_build["success"]:
-                    err = (chk_build.get("stderr") or "")[-800:].strip()
+                    err = (chk_build.get("stderr") or chk_build.get("stdout") or "")[-2000:].strip()
+                    if err:
+                        p(f"\033[31m{'─'*60}\033[0m")
+                        p(f"\033[31m  BUILD ERROR\033[0m")
+                        p(f"\033[31m{'─'*60}\033[0m")
+                        p(err)
+                        p(f"\033[31m{'─'*60}\033[0m")
                     feedback = (
                         "Harness verification FAILED after your IMPLEMENTATION COMPLETE claim.\n\n"
                         f"Build: FAIL\n{err}\n\n"
@@ -129,11 +143,22 @@ class BenchmarkHarness:
                     continue
 
                 chk_tests = m.eval_tests(self.impl_dir)
-                p(f"  Tests     : {chk_tests['tests_passed']}/{chk_tests['tests_total']} | "
-                  f"Coverage: {chk_tests['coverage_line_pct']}%")
+                p(f"  Tests     : {chk_tests['tests_passed']}/{chk_tests['tests_total']} "
+                  f"({'PASS' if chk_tests['tests_pass'] else 'FAIL'}) | "
+                  f"Coverage: {chk_tests['coverage_line_pct']}% "
+                  f"({'OK' if chk_tests['coverage_ok'] else 'ABAIXO 80%'})")
+                if not chk_tests.get("tests_pass", True):
+                    test_err = (chk_tests.get("stderr") or chk_tests.get("stdout") or "")[-2000:].strip()
+                    if test_err:
+                        p(f"\033[33m{'─'*60}\033[0m")
+                        p(f"\033[33m  TEST OUTPUT\033[0m")
+                        p(f"\033[33m{'─'*60}\033[0m")
+                        p(test_err)
+                        p(f"\033[33m{'─'*60}\033[0m")
 
+                e2e_attempts += 1
                 chk_e2e = m.eval_e2e(self.impl_dir)
-                p(f"  E2E       : {chk_e2e['passed']}/12")
+                p(f"  E2E       : {chk_e2e['passed']}/12  (tentativa E2E #{e2e_attempts})")
 
                 all_ok = (
                     chk_tests.get("tests_pass", False)
@@ -152,19 +177,23 @@ class BenchmarkHarness:
                 # Construir feedback detalhado com o que faltou
                 issues = []
                 if not chk_tests.get("tests_pass", False):
+                    e2e_fail_streak = 0
                     issues.append(
                         f"Unit tests: {chk_tests['tests_passed']}/{chk_tests['tests_total']} passed "
                         f"({chk_tests['tests_failed']} failing). Fix the failing tests."
                     )
                 if not chk_tests.get("coverage_ok", False):
+                    e2e_fail_streak = 0
                     issues.append(
                         f"Coverage: {chk_tests['coverage_line_pct']}% — need ≥80%. "
                         "Add more test cases to cover uncovered code paths."
                     )
                 if not chk_e2e.get("all_passed", False):
+                    e2e_fail_streak += 1
                     fails = "\n".join(f"  - {f}" for f in chk_e2e.get("failures", []))
                     issues.append(
-                        f"E2E scenarios: {chk_e2e['passed']}/12 passed. Failing:\n{fails}"
+                        f"E2E scenarios: {chk_e2e['passed']}/12 passed "
+                        f"(E2E falhou {e2e_fail_streak}x consecutivas). Failing:\n{fails}"
                     )
 
                 feedback = (
@@ -203,17 +232,12 @@ class BenchmarkHarness:
 
                 result = self.executor.dispatch(fn_name, fn_args)
 
-                # Mostrar erro de build/test no terminal para visibilidade do usuário
-                if fn_name == "run_command" and result.get("exit_code", 0) != 0:
-                    cmd_lower = fn_args.get("command", "").strip().lower()
-                    if cmd_lower.startswith("mvn compile") or cmd_lower.startswith("mvn clean compile"):
-                        err_snippet = (result.get("stderr") or result.get("stdout") or "")[-800:].strip()
-                        if err_snippet:
-                            p(f"\033[33m    [build error]\033[0m {err_snippet[:300]}")
-                    elif cmd_lower.startswith("mvn test"):
-                        err_snippet = (result.get("stderr") or result.get("stdout") or "")[-800:].strip()
-                        if err_snippet:
-                            p(f"\033[33m    [test error]\033[0m {err_snippet[:300]}")
+                # O streaming em _run_streaming já imprime tudo em tempo real.
+                # Apenas marca o resultado final com ✓ ou ✗ para referência rápida.
+                if fn_name == "run_command":
+                    ec = result.get("exit_code", 0)
+                    mark = "\033[32m✓\033[0m" if ec == 0 else f"\033[31m✗ (exit {ec})\033[0m"
+                    p(f"    {mark}")
 
                 messages.append({
                     "role": "tool",
@@ -268,7 +292,12 @@ class BenchmarkHarness:
         arch = m.eval_architecture(self.impl_dir, self.arch_name, self.pkg_path)
         p(f"  Arch: {'OK' if arch['ok'] else str(len(arch['violations'])) + ' violacoes'}")
 
-        agent_behavior = self.executor.agent_behavior_summary(convergence_reason)
+        agent_behavior = self.executor.agent_behavior_summary(
+            convergence_reason,
+            completion_attempts=completion_attempts,
+            e2e_attempts=e2e_attempts,
+            e2e_fail_streak=e2e_fail_streak,
+        )
 
         out_path = m.save_result(
             results_dir=self.results_dir,
@@ -304,25 +333,29 @@ class BenchmarkHarness:
     # ------------------------------------------------------------------
 
     def _build_system_prompt(self) -> str:
-        terminal_desc = TERMINAL_NOTE.get(self.terminal, self.terminal)
+        env_desc = terminal_env_description(self.terminal)
         return f"""You are an expert software engineer executing a coding benchmark.
 
-## Environment
-- Terminal: {terminal_desc}
-- Working directory (all relative paths start here): {self.impl_dir}
-- The Maven project (pom.xml) is pre-configured — do NOT modify it.
+## Execution Environment (READ CAREFULLY)
+{env_desc}
+
+## Working Directory
+{self.impl_dir}
+All relative paths in write_file and read_file start from this directory.
+The Maven project (pom.xml) is pre-configured — do NOT modify it.
 
 ## Tools
 You have exactly 3 tools:
 
 **run_command(command)** — execute a shell command in the working directory.
 Returns: stdout, stderr, exit_code.
-Examples: "mvn compile", "mvn test", "ls src/main/java"
+Examples: "mvn compile", "mvn test", "dir src\\main\\java" (Windows) or "ls src/main/java" (Unix)
 
 **write_file(path, content)** — create or overwrite a file.
 - path: relative to working directory (e.g. "src/main/java/com/benchmark/taskmanager/model/Task.java")
 - content: COMPLETE file content, never use placeholders or "// ... rest of file"
 - Parent directories are created automatically.
+- Always use forward slashes in paths passed to write_file, even on Windows.
 
 **read_file(path)** — read an existing file.
 Returns its content as a string.
@@ -334,13 +367,19 @@ Returns its content as a string.
 
 ## How to handle build failures (CRITICAL)
 When `mvn compile` returns exit_code != 0, the failure is ALWAYS a Java code error.
-It is NEVER a shell, WSL, environment, or Maven installation issue.
+It is NEVER a shell, WSL, environment, OS, or Maven installation issue.
+The harness guarantees that Maven is installed and configured correctly.
 The correct response to a build failure is:
 1. Read `stderr` carefully — find the exact file name and line number of the error.
-2. Call `write_file` to fix ONLY that file with the correct code.
-3. Run `mvn compile` again to verify.
-NEVER try: `cmd /c mvn`, alternative Maven paths, or any other shell variations.
-NEVER give up because of a "WSL" or "environment" assumption — just fix the Java code.
+2. Call `write_file` to fix ONLY that file with the correct, complete Java code.
+3. Run `mvn compile` again to verify the fix.
+NEVER try: `cmd /c mvn`, `wsl mvn`, alternative Maven paths, or any shell variations.
+NEVER diagnose "WSL issue", "environment problem", or "shell not found" — just fix the Java code.
+
+## Forbidden commands
+NEVER run `mvn spring-boot:run` or `mvn spring-boot:start` — they start a server that runs
+forever and will hang the benchmark. The harness handles server startup for E2E testing.
+Your job is compile + unit tests only. Use only: `mvn compile`, `mvn test`, `mvn clean`, `ls`/`dir`.
 """
 
     # ------------------------------------------------------------------
@@ -437,4 +476,5 @@ NEVER give up because of a "WSL" or "environment" assumption — just fix the Ja
   [F4] Arch        : {'OK' if arch.get('ok') else str(len(arch.get('violations',[]))) + ' violacoes'}
   [AG] Tool calls  : {agent['total_tool_calls']} ({agent['convergence_reason']})
   [AG] Breakdown   : {agent['tool_breakdown']}
+  [AG] Conclusoes  : {agent['completion_attempts']}x declaradas | E2E verificado {agent['e2e_attempts']}x | streak final={agent['e2e_fail_streak_at_end']}
 {'='*60}""", flush=True)

@@ -89,6 +89,8 @@ def eval_tests(impl_dir: Path) -> dict:
         "coverage_line_pct": line_pct,
         "coverage_branch_pct": branch_pct,
         "coverage_ok": coverage_ok,
+        "stdout": result.stdout[-3000:],
+        "stderr": result.stderr[-3000:],
     }
 
 
