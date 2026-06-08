@@ -12,8 +12,8 @@ dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
 
     // REST + JSON
-    implementation 'io.quarkus:quarkus-rest'
-    implementation 'io.quarkus:quarkus-rest-jackson'
+    implementation 'io.quarkus:quarkus-resteasy-reactive'
+    implementation 'io.quarkus:quarkus-resteasy-reactive-jackson'
 
     // Validação de campos (@NotBlank, @Size)
     implementation 'io.quarkus:quarkus-hibernate-validator'
@@ -25,7 +25,7 @@ dependencies {
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
 
-    // Cobertura de código — gera build/reports/jacoco/test/jacocoTestReport.csv
+    // Cobertura de código
     testImplementation 'io.quarkus:quarkus-jacoco'
 }
 
