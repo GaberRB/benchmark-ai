@@ -148,6 +148,8 @@ padrão do Spring Initializr, Kotlin superou Java em custo e velocidade.
 | `kotlin-gradle-mode-1/` | Kotlin | Spring Boot | **Gradle** | Agente único sequencial |
 | `java-quarkus-maven-mode-1/` | Java | **Quarkus** | Maven | Agente único sequencial |
 | `java-quarkus-gradle-mode-1/` | Java | **Quarkus** | Gradle | Agente único sequencial |
+| `kotlin-quarkus-maven-mode-1/` | Kotlin | **Quarkus** | Maven | Agente único sequencial |
+| `kotlin-quarkus-gradle-mode-1/` | Kotlin | **Quarkus** | Gradle | Agente único sequencial |
 
 ## Como Reproduzir
 
@@ -167,6 +169,8 @@ Abra o Claude Code na raiz do repo e execute o guia desejado:
 | [`guides/benchmark-kotlin-gradle-modo-1.md`](guides/benchmark-kotlin-gradle-modo-1.md) | Kotlin · Spring Boot · **Gradle** · agente sequencial |
 | [`guides/benchmark-java-quarkus-maven-modo-1.md`](guides/benchmark-java-quarkus-maven-modo-1.md) | Java · **Quarkus** · Maven · agente sequencial |
 | [`guides/benchmark-java-quarkus-gradle-modo-1.md`](guides/benchmark-java-quarkus-gradle-modo-1.md) | Java · **Quarkus** · Gradle · agente sequencial |
+| [`guides/benchmark-kotlin-quarkus-maven-modo-1.md`](guides/benchmark-kotlin-quarkus-maven-modo-1.md) | Kotlin · **Quarkus** · Maven · agente sequencial |
+| [`guides/benchmark-kotlin-quarkus-gradle-modo-1.md`](guides/benchmark-kotlin-quarkus-gradle-modo-1.md) | Kotlin · **Quarkus** · Gradle · agente sequencial |
 
 Os resultados (JSON + HTML) são gerados em `tools/reports/` — ignorados pelo git (cada um gera os seus).
 
@@ -344,3 +348,61 @@ O `collector.py` e o `snapshot.py` funcionam sem modificação — a saída JaCo
 | `java-quarkus-gradle-mode-1` | **Quarkus** | Gradle | — | — | — | — | — | — |
 
 **Hipótese:** O modelo tem menos exposição a JAX-RS + CDI (Quarkus) comparado com Spring MVC + Spring DI nos dados de treinamento. Isso pode se refletir em mais erros de compilação e maior custo. Ou pode ser o contrário — Quarkus tem uma configuração mais simples e menos verbosa que o modelo executa com menos fricção.
+
+---
+
+## Variante Kotlin Quarkus — Kotlin + JAX-RS + CDI
+
+> Framework: **Quarkus 3.8.3** · Linguagem: Kotlin 1.9.22 · Modelo: `claude-sonnet-4-6`  
+> Dimensão adicional: linguagem Kotlin com Quarkus (JAX-RS/CDI + `all-open` plugin)
+
+### Diferenças técnicas Kotlin + Quarkus vs Java + Quarkus
+
+| Aspecto | Java Quarkus | Kotlin Quarkus |
+|---------|-------------|----------------|
+| Classes de modelo | POJO com getters/setters | `data class` |
+| DTOs | Campos com `@NotBlank` direto | `@field:NotBlank` (redirecionamento Kotlin) |
+| DI | `@Inject` em campo | `@Inject lateinit var` |
+| Classes CDI | Abertas por default (Java) | `all-open` plugin obrigatório |
+| Null safety | Opcional (reference types) | Nativo no tipo system |
+
+O `collector.py` e o `snapshot.py` funcionam sem modificação — a saída JaCoCo é idêntica.
+
+### Resultados Kotlin Quarkus — Maven
+
+> 🔄 A preencher após execução do guia
+
+| | |
+|---|---|
+| 💰 Custo | — |
+| ⏱ Duração | — |
+| 📡 API calls | — |
+| 🐛 Erros | — |
+| 📏 LOC produção | — |
+| 🎯 Cobertura linha | — |
+| ✅ E2E | — / 12 |
+
+### Resultados Kotlin Quarkus — Gradle
+
+> 🔄 A preencher após execução do guia
+
+| | |
+|---|---|
+| 💰 Custo | — |
+| ⏱ Duração | — |
+| 📡 API calls | — |
+| 🐛 Erros | — |
+| 📏 LOC produção | — |
+| 🎯 Cobertura linha | — |
+| ✅ E2E | — / 12 |
+
+### Comparativo completo — todas as variantes Quarkus
+
+> 🔄 A preencher após execução dos guias Kotlin Quarkus
+
+| Variante | Linguagem | Build | Custo | Duração | Erros | LOC prod | Cob. linha | E2E |
+|---|---|---|---|---|---|---|---|---|
+| `java-quarkus-maven-mode-1` | Java | Maven | — | — | — | — | — | — |
+| `java-quarkus-gradle-mode-1` | Java | Gradle | — | — | — | — | — | — |
+| `kotlin-quarkus-maven-mode-1` | **Kotlin** | Maven | — | — | — | — | — | — |
+| `kotlin-quarkus-gradle-mode-1` | **Kotlin** | Gradle | — | — | — | — | — | — |

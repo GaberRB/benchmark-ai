@@ -79,6 +79,7 @@ def main():
     parser.add_argument("--language",   required=True,
                         choices=["java", "kotlin", "java-gradle", "kotlin-gradle",
                                  "java-quarkus-maven", "java-quarkus-gradle",
+                                 "kotlin-quarkus-maven", "kotlin-quarkus-gradle",
                                  "arch-hexagonal", "arch-clean",
                                  "arch-cqrs", "arch-mvc", "arch-vertical-slice"])
     parser.add_argument("--session-id", default=None,  help="UUID da sessão Claude Code")
