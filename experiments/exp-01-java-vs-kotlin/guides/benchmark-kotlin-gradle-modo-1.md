@@ -12,7 +12,7 @@
 ## PASSO 0 — Verificar Gradle instalado
 
 ```powershell
-gradle --version
+./gradlew.bat --version
 ```
 
 Esperado: versão 8.x ou superior. Se não estiver instalado:
@@ -123,13 +123,13 @@ data class Task(
 
 ```powershell
 cd kotlin-gradle-mode-1
-gradle compileKotlin
+./gradlew.bat compileKotlin
 ```
 
 Se compilar com sucesso:
 
 ```powershell
-gradle test
+./gradlew.bat test
 ```
 
 **Nunca avance para o próximo arquivo com build quebrado ou teste falhando.**
@@ -141,22 +141,22 @@ Cada falha corrigida é capturada como métrica automaticamente — não comente
 
 ```powershell
 cd kotlin-gradle-mode-1
-gradle compileKotlin
+./gradlew.bat compileKotlin
 ```
 Esperado: `BUILD SUCCESSFUL`
 
 ```powershell
-gradle test
+./gradlew.bat test
 ```
 Esperado: `BUILD SUCCESSFUL`, zero `FAILED`
 
 ```powershell
-gradle jacocoTestReport
+./gradlew.bat jacocoTestReport
 # Relatório em: build/reports/jacoco/test/html/index.html
 ```
 
 ```powershell
-gradle check
+./gradlew.bat check
 # Falha se cobertura < 80% (configurado no build.gradle.kts)
 ```
 
@@ -168,7 +168,7 @@ gradle check
 
 ```powershell
 cd kotlin-gradle-mode-1
-Start-Process -NoNewWindow -FilePath "gradle" -ArgumentList "bootRun"
+Start-Process -NoNewWindow -FilePath ".gradlew.bat" -ArgumentList "bootRun"
 Start-Sleep -Seconds 25
 ```
 
@@ -232,7 +232,7 @@ Write-Output "E2E-12: $($r12 -split "`n" | Select-Object -Last 1) (esperado: 404
 
 ### Se algum cenário falhar
 
-Corrija o código, rode `gradle compileKotlin` e `gradle test`, reaponte o app e repita o cenário que falhou.
+Corrija o código, rode `./gradlew.bat compileKotlin` e `./gradlew.bat test`, reaponte o app e repita o cenário que falhou.
 
 ### Encerrar o app
 
@@ -258,7 +258,7 @@ Confirme que `tools/reports/kotlin-gradle_*.json` foi criado.
 
 ```powershell
 cd kotlin-gradle-mode-1
-gradle test jacocoTestReport
+./gradlew.bat test jacocoTestReport
 # Relatório JaCoCo em: build/reports/jacoco/test/html/index.html
 
 cd C:\Users\grios\OneDrive\Desktop\benchmark
@@ -311,9 +311,9 @@ Session ID: <UUID>
 Arquivo de métricas: tools/reports/kotlin-gradle_<timestamp>.json
 
 Critérios de entrega:
-[ ] gradle compileKotlin — BUILD SUCCESSFUL
-[ ] gradle test          — 0 failures, 0 errors
-[ ] gradle check         — cobertura JaCoCo ≥ 80%
+[ ] ./gradlew.bat compileKotlin — BUILD SUCCESSFUL
+[ ] ./gradlew.bat test          — 0 failures, 0 errors
+[ ] ./gradlew.bat check         — cobertura JaCoCo ≥ 80%
 [ ] App rodou            — porta 8080 ok
 [ ] E2E                  — X/12 passaram
 
@@ -326,8 +326,8 @@ Duração sessão: (ver JSON)
 
 ## ⚠️ CRITÉRIO DE ACEITE
 
-- `gradle compileKotlin` → BUILD SUCCESSFUL
-- `gradle test` → 0 failures, 0 errors
-- `gradle check` → cobertura ≥ 80%
+- `./gradlew.bat compileKotlin` → BUILD SUCCESSFUL
+- `./gradlew.bat test` → 0 failures, 0 errors
+- `./gradlew.bat check` → cobertura ≥ 80%
 - 12/12 cenários E2E passando
 - `tools/reports/kotlin-gradle_*.json` gerado e preenchido
