@@ -273,7 +273,7 @@ def build_plan(models: list[dict], arch_idxs: list[int]) -> list[tuple[dict, int
     return [(m, a) for m in models for a in arch_idxs]
 
 
-def show_plan(plan: list[tuple[dict, int]], max_build: int, max_test: int) -> None:
+def show_plan(plan: list[tuple[dict, int]], max_build: int, max_test: int, max_e2e: int) -> None:
     console.print()
     console.print(Rule("[bold cyan]Plano de execução[/bold cyan]"))
     table = Table(box=box.SIMPLE_HEAD, show_header=True,
@@ -283,10 +283,11 @@ def show_plan(plan: list[tuple[dict, int]], max_build: int, max_test: int) -> No
     table.add_column("Arquitetura", style="white",  min_width=20)
     table.add_column("Max build",   style="yellow", width=10, justify="right")
     table.add_column("Max test",    style="yellow", width=10, justify="right")
+    table.add_column("Max E2E",     style="yellow", width=10, justify="right")
 
     for i, (model, a) in enumerate(plan, 1):
         arch = config.architectures[a - 1]
-        table.add_row(str(i), model.get("label", model["name"]), arch, str(max_build), str(max_test))
+        table.add_row(str(i), model.get("label", model["name"]), arch, str(max_build), str(max_test), str(max_e2e))
 
     console.print(table)
     console.print(f"  Total: [bold cyan]{len(plan)} runs[/bold cyan]\n")
@@ -333,10 +334,15 @@ def run_benchmark_mode() -> None:
         default=config.max_test_failures,
         min_val=1,
     )
+    max_e2e = ask_int(
+        "Max falhas E2E consecutivas antes de desistir  ",
+        default=config.max_e2e_failures,
+        min_val=1,
+    )
     console.print()
 
     plan = build_plan(selected_models, arch_idxs)
-    show_plan(plan, max_build, max_test)
+    show_plan(plan, max_build, max_test, max_e2e)
 
     if not confirm("Confirmar e iniciar o benchmark?"):
         console.print("[yellow]Cancelado.[/yellow]")
@@ -344,6 +350,7 @@ def run_benchmark_mode() -> None:
 
     config.max_build_failures = max_build
     config.max_test_failures  = max_test
+    config.max_e2e_failures   = max_e2e
 
     from harness.harness import BenchmarkHarness
 
@@ -357,8 +364,9 @@ def run_benchmark_mode() -> None:
         console.print(Panel(
             f"[bold white]Run {i}/{total}[/bold white]  "
             f"[cyan]{model.get('label', model['name'])}[/cyan]  ×  [green]{arch}[/green]\n"
-            f"[dim]build failures max={config.max_build_failures}  |  "
-            f"test failures max={config.max_test_failures}  |  execução autônoma[/dim]",
+            f"[dim]build max={config.max_build_failures}  |  "
+            f"test max={config.max_test_failures}  |  "
+            f"e2e max={config.max_e2e_failures}  |  execução autônoma[/dim]",
             style="bold",
             padding=(0, 2),
         ))

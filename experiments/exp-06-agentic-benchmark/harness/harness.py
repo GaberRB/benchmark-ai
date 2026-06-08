@@ -72,7 +72,7 @@ class BenchmarkHarness:
         _cached_build = _cached_tests = _cached_e2e = None
 
         p(f"[INFO] Iniciando loop agentico "
-          f"(build max={self.cfg.max_build_failures} falhas | test max={self.cfg.max_test_failures} falhas)...")
+          f"(build max={self.cfg.max_build_failures} | test max={self.cfg.max_test_failures} | e2e max={self.cfg.max_e2e_failures} falhas consecutivas)...")
 
         while True:
             p(f"  → aguardando API ({self.model_name})...", end="\r")
@@ -190,10 +190,14 @@ class BenchmarkHarness:
                     )
                 if not chk_e2e.get("all_passed", False):
                     e2e_fail_streak += 1
+                    if e2e_fail_streak >= self.cfg.max_e2e_failures:
+                        p(f"\n[AVISO] Limite de {self.cfg.max_e2e_failures} falhas consecutivas de E2E atingido.")
+                        convergence_reason = "max_e2e_failures"
+                        break
                     fails = "\n".join(f"  - {f}" for f in chk_e2e.get("failures", []))
                     issues.append(
                         f"E2E scenarios: {chk_e2e['passed']}/12 passed "
-                        f"(E2E falhou {e2e_fail_streak}x consecutivas). Failing:\n{fails}"
+                        f"(E2E falhou {e2e_fail_streak}x consecutivas de {self.cfg.max_e2e_failures} permitidas). Failing:\n{fails}"
                     )
 
                 feedback = (

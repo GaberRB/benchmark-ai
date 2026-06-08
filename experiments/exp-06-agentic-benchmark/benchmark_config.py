@@ -24,6 +24,7 @@ class BenchmarkConfig:
     max_tokens_per_turn: int = 8192
     max_build_failures: int = 10       # max de mvn compile falhando
     max_test_failures: int = 10        # max de mvn test falhando
+    max_e2e_failures: int = 10         # max de verificações E2E falhando consecutivamente
 
     # ===== Tech Stack =====
     tech_stack: str = "Java 21, Spring Boot 3.2"
